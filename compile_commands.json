@@ -1,0 +1,17 @@
+[
+{
+  "directory": "/home/anisak/ani_proj/async_logger/build",
+  "command": "/usr/bin/c++ -I/home/anisak/ani_proj/async_logger/src -std=gnu++17 -o CMakeFiles/async_logger.dir/src/log.cc.o -c /home/anisak/ani_proj/async_logger/src/log.cc",
+  "file": "/home/anisak/ani_proj/async_logger/src/log.cc"
+},
+{
+  "directory": "/home/anisak/ani_proj/async_logger/build",
+  "command": "/usr/bin/c++ -I/home/anisak/ani_proj/async_logger/src -std=gnu++17 -o CMakeFiles/async_logger.dir/src/ringbuffer.cc.o -c /home/anisak/ani_proj/async_logger/src/ringbuffer.cc",
+  "file": "/home/anisak/ani_proj/async_logger/src/ringbuffer.cc"
+},
+{
+  "directory": "/home/anisak/ani_proj/async_logger/build",
+  "command": "/usr/bin/c++ -I/home/anisak/ani_proj/async_logger/src -std=gnu++17 -o CMakeFiles/async_logger.dir/src/main.cc.o -c /home/anisak/ani_proj/async_logger/src/main.cc",
+  "file": "/home/anisak/ani_proj/async_logger/src/main.cc"
+}
+]
