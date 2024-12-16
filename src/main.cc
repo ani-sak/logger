@@ -4,9 +4,10 @@
 #include <cstddef>
 #include <functional>
 #include <iostream>
+#include <string>
 #include <thread>
 
-void create_log(RingBuffer& rb) {
+void create_log(RingBuffer<std::string>& rb) {
     rb.push("1");
     rb.push("2");
     rb.push("3");
@@ -35,12 +36,12 @@ void create_log(RingBuffer& rb) {
     std::cout << "Done pushing second" << '\n';
 }
 
-void flush_log(RingBuffer &rb) {
+void flush_log(RingBuffer<std::string> &rb) {
     // std::this_thread::sleep_for(std::chrono::seconds(2));
 
     std::size_t num_msg_to_print = 9;
     while (num_msg_to_print > 0) {
-        RingBuffer::Result res = rb.pop();
+        RingBuffer<std::string>::Result res = rb.pop();
         if (res.valid) {
             std::cout << res.res << '\n';
             num_msg_to_print--;
@@ -51,7 +52,7 @@ void flush_log(RingBuffer &rb) {
 
     num_msg_to_print = 5;
     while (num_msg_to_print > 0) {
-        RingBuffer::Result res = rb.pop();
+        RingBuffer<std::string>::Result res = rb.pop();
         if (res.valid) {
             std::cout << res.res << '\n';
             num_msg_to_print--;
@@ -63,7 +64,7 @@ int main() {
 
     std::cout << "Starting log" << '\n';
 
-    RingBuffer rb(9);
+    RingBuffer<std::string> rb(9);
     std::thread a(create_log, std::ref(rb));
     std::thread b(flush_log, std::ref(rb));
 
