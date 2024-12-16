@@ -37,13 +37,13 @@ void create_log(RingBuffer<std::string>& rb) {
 }
 
 void flush_log(RingBuffer<std::string> &rb) {
-    // std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 
     std::size_t num_msg_to_print = 9;
     while (num_msg_to_print > 0) {
         RingBuffer<std::string>::Result res = rb.pop();
-        if (res.valid) {
-            std::cout << res.res << '\n';
+        if (!res.err()) {
+            std::cout << res.data() << '\n';
             num_msg_to_print--;
         }
     }
@@ -53,8 +53,8 @@ void flush_log(RingBuffer<std::string> &rb) {
     num_msg_to_print = 5;
     while (num_msg_to_print > 0) {
         RingBuffer<std::string>::Result res = rb.pop();
-        if (res.valid) {
-            std::cout << res.res << '\n';
+        if (!res.err()) {
+            std::cout << res.data() << '\n';
             num_msg_to_print--;
         }
     }

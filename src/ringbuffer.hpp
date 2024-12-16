@@ -15,7 +15,19 @@ public:
     RingBuffer &operator=(const RingBuffer &) = delete;
     ~RingBuffer();
 
-    struct Result {
+    class Result {
+    public:
+        Result(const T &r, bool valid = false) : res(r), valid(valid) {}
+        T data() {
+            if (!valid) {
+                return {};
+            }
+
+            return res;
+        }
+        bool err() { return !valid; }
+
+    private:
         T res;
         bool valid;
     };
@@ -23,6 +35,7 @@ public:
     bool push(const T& data); // Fails if queue full
     // void push_blocking (const T& data); // Blocks if queue full
     Result pop();
+    // void pop_blocking (const T& data); // Blocks if queue empty
 
 private:
     std::atomic<size_t> head;
@@ -71,10 +84,6 @@ template <typename T> bool RingBuffer<T>::push(const T& data) {
         tail = (tail + 1) % buffer_size;
         return true;
     }
-
-    // Return if buffer is full
-    // Avoid waiting for space to free up
-    // Avoid blocking main thread
     case BufferUtilStatus::Full: {
         return false;
     }
