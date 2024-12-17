@@ -6,19 +6,18 @@
 #include <mutex>
 
 // Thread safe ringbuffer
-template<typename T>
-class RingBuffer {
+template <typename T> class RingBuffer {
 public:
     RingBuffer(size_t buffer_size);
-    RingBuffer(RingBuffer &&) = delete;
-    RingBuffer(const RingBuffer &) = delete;
-    RingBuffer &operator=(RingBuffer &&) = delete;
-    RingBuffer &operator=(const RingBuffer &) = delete;
+    RingBuffer(RingBuffer&&) = delete;
+    RingBuffer(const RingBuffer&) = delete;
+    RingBuffer& operator=(RingBuffer&&) = delete;
+    RingBuffer& operator=(const RingBuffer&) = delete;
     ~RingBuffer();
 
     class Result {
     public:
-        Result(const T &r, bool valid = false) : res(r), valid(valid) {}
+        Result(const T& r, bool valid = false) : res(r), valid(valid) {}
         T data() {
             if (!valid) {
                 return {};
@@ -44,7 +43,7 @@ private:
     std::atomic<size_t> num_entries;
 
     const std::size_t buffer_size;
-    T *buf;
+    T* buf;
 
     std::mutex push_mtx;
     std::mutex pop_mtx;
@@ -57,8 +56,8 @@ private:
 
 template <typename T>
 RingBuffer<T>::RingBuffer(size_t buffer_size)
-    : head(0), tail(0), num_entries(0), buffer_size(buffer_size),
-      buf(nullptr), push_mtx(), pop_mtx() {
+    : head(0), tail(0), num_entries(0), buffer_size(buffer_size), buf(nullptr),
+      push_mtx(), pop_mtx() {
     buf = new T[buffer_size];
 }
 

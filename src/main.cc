@@ -76,7 +76,7 @@
 // }
 //
 
-void test_logger(Logging::Logger &logger) {
+void test_logger(Logging::Logger& logger) {
     logger.log(Logging::Logger::LogLevel::Warn, "1");
     logger.log(Logging::Logger::LogLevel::Warn, "2");
     logger.log(Logging::Logger::LogLevel::Warn, "3");

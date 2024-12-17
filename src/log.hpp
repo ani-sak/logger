@@ -20,14 +20,14 @@ class Logger {
 public:
     Logger(std::size_t queue_size);
     Logger();
-    Logger(Logger &&) = delete;
-    Logger(const Logger &) = delete;
-    Logger &operator=(Logger &&) = delete;
-    Logger &operator=(const Logger &) = delete;
+    Logger(Logger&&) = delete;
+    Logger(const Logger&) = delete;
+    Logger& operator=(Logger&&) = delete;
+    Logger& operator=(const Logger&) = delete;
     ~Logger();
 
     enum class LogLevel { Debug, Warn, Error };
-    void log(LogLevel loglevel, const std::string &logmsg);
+    void log(LogLevel loglevel, const std::string& logmsg);
 
 private:
     std::unique_ptr<RingBuffer<std::string>> buffer;

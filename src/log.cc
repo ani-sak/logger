@@ -1,7 +1,6 @@
 #include "log.hpp"
 #include "ringbuffer.hpp"
 
-#include <chrono>
 #include <cstddef>
 #include <iostream>
 #include <memory>
@@ -45,7 +44,7 @@ void Logger::store_logs() {
     }
 }
 
-void Logger::log(LogLevel loglevel, const std::string &logmsg) {
+void Logger::log(LogLevel loglevel, const std::string& logmsg) {
     // Prepend time
     buffer->try_push(logmsg);
 }
