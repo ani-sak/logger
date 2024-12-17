@@ -33,10 +33,10 @@ public:
     };
 
     bool try_push(const T& data);
-    // bool try_push(const T& data, const std::chrono::microseconds& duration);
+    bool try_push(const T& data, const std::chrono::microseconds& duration);
     void push(const T& data);
     Result try_pop();
-    // Result try_pop(const std::chrono::microseconds& duration);
+    Result try_pop(const std::chrono::microseconds& duration);
     T pop();
 
 private:
@@ -88,6 +88,22 @@ template <typename T> bool RingBuffer<T>::try_push(const T& data) {
     return true;
 }
 
+template <typename T>
+bool RingBuffer<T>::try_push(const T& data,
+                             const std::chrono::microseconds& duration) {
+    std::unique_lock<std::mutex> lock(push_mtx);
+
+    if (num_entries >= buffer_size) {
+        if (!cv_buf_not_full.wait_for(
+                lock, duration, [this] { return num_entries < buffer_size; })) {
+            return false;
+        }
+    }
+
+    push_impl(data);
+    return true;
+}
+
 template <typename T> void RingBuffer<T>::push(const T& data) {
     std::unique_lock<std::mutex> lock(push_mtx);
 
@@ -113,6 +129,22 @@ template <typename T> typename RingBuffer<T>::Result RingBuffer<T>::try_pop() {
 
     if (num_entries <= 0) {
         return {T{}, false};
+    }
+
+    T retval = pop_impl();
+    return {retval, true};
+}
+
+template <typename T>
+typename RingBuffer<T>::Result
+RingBuffer<T>::try_pop(const std::chrono::microseconds& duration) {
+    std::unique_lock<std::mutex> lock(pop_mtx);
+
+    if (num_entries <= 0) {
+        if (!cv_buf_not_empty.wait_for(lock, duration,
+                                       [this] { return num_entries > 0; })) {
+            return {T{}, false};
+        }
     }
 
     T retval = pop_impl();
