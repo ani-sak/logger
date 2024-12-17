@@ -1,11 +1,11 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <cstddef>
 #include <mutex>
 
-// Thread safe ringbuffer
 template <typename T> class RingBuffer {
 public:
     RingBuffer(size_t buffer_size);
@@ -33,8 +33,10 @@ public:
     };
 
     bool try_push(const T& data);
+    // bool try_push(const T& data, const std::chrono::microseconds& duration);
     void push(const T& data);
     Result try_pop();
+    // Result try_pop(const std::chrono::microseconds& duration);
     T pop();
 
 private:
@@ -50,6 +52,9 @@ private:
 
     std::condition_variable cv_buf_not_full;
     std::condition_variable cv_buf_not_empty;
+
+    void push_impl(const T& data);
+    T pop_impl();
 };
 
 //===----------------------------------------------------------------------===//
@@ -63,6 +68,15 @@ RingBuffer<T>::RingBuffer(size_t buffer_size)
 
 template <typename T> RingBuffer<T>::~RingBuffer() { delete[] buf; }
 
+//===----------------------------------------------------------------------===//
+
+template <typename T> void RingBuffer<T>::push_impl(const T& data) {
+    buf[tail] = data;
+    tail = (tail + 1) % buffer_size;
+    num_entries++;
+    cv_buf_not_empty.notify_one();
+}
+
 template <typename T> bool RingBuffer<T>::try_push(const T& data) {
     std::lock_guard<std::mutex> lock(push_mtx);
 
@@ -70,11 +84,7 @@ template <typename T> bool RingBuffer<T>::try_push(const T& data) {
         return false;
     }
 
-    buf[tail] = data;
-    tail = (tail + 1) % buffer_size;
-    num_entries++;
-
-    cv_buf_not_empty.notify_one();
+    push_impl(data);
     return true;
 }
 
@@ -86,12 +96,16 @@ template <typename T> void RingBuffer<T>::push(const T& data) {
                              [this] { return num_entries < buffer_size; });
     }
 
-    buf[tail] = data;
-    tail = (tail + 1) % buffer_size;
-    num_entries++;
-
-    cv_buf_not_empty.notify_one();
+    push_impl(data);
     return;
+}
+
+template <typename T> T RingBuffer<T>::pop_impl() {
+    std::size_t old_head = head;
+    head = (head + 1) % buffer_size;
+    num_entries--;
+    cv_buf_not_full.notify_one();
+    return buf[old_head];
 }
 
 template <typename T> typename RingBuffer<T>::Result RingBuffer<T>::try_pop() {
@@ -101,11 +115,8 @@ template <typename T> typename RingBuffer<T>::Result RingBuffer<T>::try_pop() {
         return {T{}, false};
     }
 
-    std::size_t old_head = head;
-    head = (head + 1) % buffer_size;
-    num_entries--;
-    cv_buf_not_full.notify_one();
-    return {buf[old_head], true};
+    T retval = pop_impl();
+    return {retval, true};
 }
 
 template <typename T> T RingBuffer<T>::pop() {
@@ -115,9 +126,5 @@ template <typename T> T RingBuffer<T>::pop() {
         cv_buf_not_empty.wait(lock, [this] { return num_entries > 0; });
     }
 
-    std::size_t old_head = head;
-    head = (head + 1) % buffer_size;
-    num_entries--;
-    cv_buf_not_full.notify_one();
-    return buf[old_head];
+    return pop_impl();
 }
