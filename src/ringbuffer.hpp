@@ -15,6 +15,9 @@ public:
     RingBuffer &operator=(const RingBuffer &) = delete;
     ~RingBuffer();
 
+    enum class BufferUtilStatus { Empty, Partial, Full };
+    BufferUtilStatus get_buffer_fill_status();
+
     class Result {
     public:
         Result(const T &r, bool valid = false) : res(r), valid(valid) {}
@@ -46,24 +49,21 @@ private:
 
     std::mutex push_mtx;
     std::mutex pop_mtx;
-
-    enum class BufferUtilStatus { Empty, Partial, Full };
-    BufferUtilStatus compute();
 };
 
 //===----------------------------------------------------------------------===//
 
 template <typename T>
 RingBuffer<T>::RingBuffer(size_t buffer_size)
-    : head(0), tail(0), buffer_size(buffer_size), buf(nullptr), push_mtx(),
+    : head(0), tail(0), buffer_size(buffer_size + 1), buf(nullptr), push_mtx(),
       pop_mtx() {
-    buf = new T[buffer_size];
+    buf = new T[this->buffer_size];
 }
 
 template <typename T> RingBuffer<T>::~RingBuffer() { delete[] buf; }
 
 template <typename T>
-typename RingBuffer<T>::BufferUtilStatus RingBuffer<T>::compute() {
+typename RingBuffer<T>::BufferUtilStatus RingBuffer<T>::get_buffer_fill_status() {
     if (head == tail) {
         return BufferUtilStatus::Empty;
     }
@@ -76,7 +76,7 @@ typename RingBuffer<T>::BufferUtilStatus RingBuffer<T>::compute() {
 }
 
 template <typename T> bool RingBuffer<T>::push(const T& data) {
-    switch (compute()) {
+    switch (get_buffer_fill_status()) {
     case BufferUtilStatus::Empty:
     case BufferUtilStatus::Partial: {
         std::lock_guard<std::mutex> lock(push_mtx);
@@ -93,7 +93,7 @@ template <typename T> bool RingBuffer<T>::push(const T& data) {
 }
 
 template <typename T> typename RingBuffer<T>::Result RingBuffer<T>::pop() {
-    switch (compute()) {
+    switch (get_buffer_fill_status()) {
     case BufferUtilStatus::Empty: {
         return {T{}, false};
     }
