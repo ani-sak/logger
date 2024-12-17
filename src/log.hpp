@@ -8,13 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstddef>
-#include <memory>
 #include <string>
 #include <thread>
 
 #include "ringbuffer_fwd.hpp"
 
 namespace Logging {
+
+template<typename T>
+using RB = Ringbuffer::RingBuffer<T>;
 
 class Logger {
 public:
@@ -30,7 +32,7 @@ public:
     void log(LogLevel loglevel, const std::string& logmsg);
 
 private:
-    std::unique_ptr<RingBuffer<std::string>> buffer;
+    std::unique_ptr<RB<std::string>> buffer;
     bool stop_log_thread;
     void store_logs();
     std::thread log_thread;

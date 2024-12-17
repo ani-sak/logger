@@ -114,7 +114,7 @@ void test_logger(Logging::Logger& logger) {
 
     std::cout << "Done storing logs second" << '\n';
 
-    std::this_thread::sleep_for(std::chrono::seconds(8));
+    std::this_thread::sleep_for(std::chrono::seconds(3));
 
     std::cout << "Exiting" << '\n';
 }

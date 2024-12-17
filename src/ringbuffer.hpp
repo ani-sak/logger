@@ -6,6 +6,8 @@
 #include <cstddef>
 #include <mutex>
 
+namespace Ringbuffer {
+
 template <typename T> class RingBuffer {
 public:
     RingBuffer(size_t buffer_size);
@@ -160,3 +162,5 @@ template <typename T> T RingBuffer<T>::pop() {
 
     return pop_impl();
 }
+
+} // namespace Ringbuffer
