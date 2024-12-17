@@ -41,7 +41,27 @@ void Logger::store_logs() {
 }
 
 void Logger::log(LogLevel loglevel, const std::string& logmsg) {
-    buffer->try_push(logmsg);
+    const std::time_t curr_time =
+        std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::string msg(std::ctime(&curr_time));
+    msg.pop_back();
+
+    msg = "[" + msg + "] ";
+    switch (loglevel) {
+        case LogLevel::Error:
+            msg += "ERROR: ";
+            break;
+        case LogLevel::Warn:
+            msg += "Warn: ";
+            break;
+        default:
+            msg += "debug: ";
+            break;
+    }
+
+    msg += logmsg;
+
+    buffer->try_push(msg);
 }
 
 } // namespace Logging
