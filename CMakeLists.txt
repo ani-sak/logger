@@ -14,8 +14,11 @@ set(SRC_MAIN ${SOURCE_PREFIX}/main.cc)
 set(INCL ${CMAKE_CURRENT_LIST_DIR}/src)
 
 # [LIBRARIES]
+set(LIBRARY_PREFIX ${CMAKE_CURRENT_LIST_DIR}/lib)
+
+add_subdirectory(${LIBRARY_PREFIX}/fmt)
 
 # [TARGETS]
 add_executable(async_logger ${SRC} ${SRC_MAIN})
 target_include_directories(async_logger PRIVATE ${INCL})
-target_link_libraries(async_logger PRIVATE pthread)
+target_link_libraries(async_logger PRIVATE pthread fmt::fmt)

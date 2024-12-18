@@ -1,17 +1,22 @@
 [
 {
   "directory": "/home/anisak/ani_proj/async_logger/build",
-  "command": "/usr/bin/c++ -I/home/anisak/ani_proj/async_logger/src -std=gnu++17 -o CMakeFiles/async_logger.dir/src/log.cc.o -c /home/anisak/ani_proj/async_logger/src/log.cc",
+  "command": "/usr/bin/c++ -I/home/anisak/ani_proj/async_logger/src -I/home/anisak/ani_proj/async_logger/lib/fmt/include -std=gnu++17 -o CMakeFiles/async_logger.dir/src/log.cc.o -c /home/anisak/ani_proj/async_logger/src/log.cc",
   "file": "/home/anisak/ani_proj/async_logger/src/log.cc"
 },
 {
   "directory": "/home/anisak/ani_proj/async_logger/build",
-  "command": "/usr/bin/c++ -I/home/anisak/ani_proj/async_logger/src -std=gnu++17 -o CMakeFiles/async_logger.dir/src/ringbuffer.cc.o -c /home/anisak/ani_proj/async_logger/src/ringbuffer.cc",
-  "file": "/home/anisak/ani_proj/async_logger/src/ringbuffer.cc"
+  "command": "/usr/bin/c++ -I/home/anisak/ani_proj/async_logger/src -I/home/anisak/ani_proj/async_logger/lib/fmt/include -std=gnu++17 -o CMakeFiles/async_logger.dir/src/main.cc.o -c /home/anisak/ani_proj/async_logger/src/main.cc",
+  "file": "/home/anisak/ani_proj/async_logger/src/main.cc"
 },
 {
   "directory": "/home/anisak/ani_proj/async_logger/build",
-  "command": "/usr/bin/c++ -I/home/anisak/ani_proj/async_logger/src -std=gnu++17 -o CMakeFiles/async_logger.dir/src/main.cc.o -c /home/anisak/ani_proj/async_logger/src/main.cc",
-  "file": "/home/anisak/ani_proj/async_logger/src/main.cc"
+  "command": "/usr/bin/c++ -I/home/anisak/ani_proj/async_logger/lib/fmt/include -std=gnu++17 -o lib/fmt/CMakeFiles/fmt.dir/src/format.cc.o -c /home/anisak/ani_proj/async_logger/lib/fmt/src/format.cc",
+  "file": "/home/anisak/ani_proj/async_logger/lib/fmt/src/format.cc"
+},
+{
+  "directory": "/home/anisak/ani_proj/async_logger/build",
+  "command": "/usr/bin/c++ -I/home/anisak/ani_proj/async_logger/lib/fmt/include -std=gnu++17 -o lib/fmt/CMakeFiles/fmt.dir/src/os.cc.o -c /home/anisak/ani_proj/async_logger/lib/fmt/src/os.cc",
+  "file": "/home/anisak/ani_proj/async_logger/lib/fmt/src/os.cc"
 }
 ]
