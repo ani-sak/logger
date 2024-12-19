@@ -1,6 +1,7 @@
 #include "async_logger/logger.hpp"
 #include "fmt/base.h"
 #include "fmt/chrono.h"
+#include "fmt/color.h"
 #include "fmt/format.h"
 #include "fmt/os.h"
 #include "ringbuffer.hpp"
@@ -60,7 +61,21 @@ void ConsoleLoggerImpl::store_logs() {
 
 void ConsoleLoggerImpl::log(LogLevel loglevel, const std::string& logmsg) {
     auto time_now = std::chrono::system_clock::now();
-    std::string msg = fmt::format("[{}]: {}\n", time_now, logmsg);
+
+    fmt::text_style style;
+    switch (loglevel) {
+    case LogLevel::Debug:
+        style = fmt::text_style();
+        break;
+    case LogLevel::Warn:
+        style = fmt::fg(fmt::color::yellow);
+        break;
+    case LogLevel::Error:
+        style = fmt::fg(fmt::color::red);
+        break;
+    }
+
+    std::string msg = fmt::format(style, "[{}]: {}\n", time_now, logmsg);
     buffer->try_push(msg);
 }
 
@@ -117,7 +132,21 @@ void FileLoggerImpl::store_logs() {
 
 void FileLoggerImpl::log(LogLevel loglevel, const std::string& logmsg) {
     auto time_now = std::chrono::system_clock::now();
-    std::string msg = fmt::format("[{}]: {}\n", time_now, logmsg);
+
+    std::string msglabel;
+    switch (loglevel) {
+    case LogLevel::Debug:
+        msglabel = "Debug";
+        break;
+    case LogLevel::Warn:
+        msglabel = "Warn";
+        break;
+    case LogLevel::Error:
+        msglabel = "Error";
+        break;
+    }
+
+    std::string msg = fmt::format("[{}] {}: {}\n", time_now, msglabel, logmsg);
     buffer->try_push(msg);
 }
 
