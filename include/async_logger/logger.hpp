@@ -15,17 +15,19 @@ public:
     Logger() = default;
     Logger(Logger&&) = delete;
     Logger(const Logger&) = delete;
-    Logger& operator=(Logger&&) = delete;
-    Logger& operator=(const Logger&) = delete;
+    auto operator=(Logger&&) -> Logger& = delete;
+    auto operator=(const Logger&) -> Logger& = delete;
     virtual ~Logger() = default;
 
     // Threadsafe log that minimizes blocking client thread
     virtual void log(LogLevel loglevel, const std::string& logmsg) = 0;
 };
 
-std::shared_ptr<Logger>
-ConsoleLogger(std::size_t queue_size = default_queue_size);
+auto ConsoleLogger(std::size_t queue_size = default_queue_size)
+    -> std::shared_ptr<Logger>;
 
-std::shared_ptr<Logger> FileLogger(const std::string& logfile,
-                                   std::size_t queue_size = default_queue_size);
+auto FileLogger(const std::string& logfile,
+                std::size_t queue_size = default_queue_size)
+    -> std::shared_ptr<Logger>;
+
 } // namespace Logger

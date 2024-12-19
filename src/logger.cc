@@ -16,6 +16,10 @@ namespace Logger {
 
 template <typename T> using RB = Ringbuffer::RingBuffer<T>;
 
+namespace {
+constexpr auto store_log_try_duration = std::chrono::milliseconds(50);
+} // namespace
+
 //===----------------------------------------------------------------------===//
 
 class ConsoleLoggerImpl : public Logger {
@@ -23,23 +27,22 @@ public:
     ConsoleLoggerImpl(std::size_t queue_size);
     ConsoleLoggerImpl(ConsoleLoggerImpl&&) = delete;
     ConsoleLoggerImpl(const ConsoleLoggerImpl&) = delete;
-    ConsoleLoggerImpl& operator=(ConsoleLoggerImpl&&) = delete;
-    ConsoleLoggerImpl& operator=(const ConsoleLoggerImpl&) = delete;
-    ~ConsoleLoggerImpl();
+    auto operator=(ConsoleLoggerImpl&&) -> ConsoleLoggerImpl& = delete;
+    auto operator=(const ConsoleLoggerImpl&) -> ConsoleLoggerImpl& = delete;
+    ~ConsoleLoggerImpl() override;
 
-    void log(LogLevel loglevel, const std::string& logmsg);
+    void log(LogLevel loglevel, const std::string& logmsg) override;
 
 private:
     std::unique_ptr<RB<std::string>> buffer;
-    bool stop_log_thread;
+    bool stop_log_thread{};
     void store_logs();
     std::thread log_thread;
 };
 
 ConsoleLoggerImpl::ConsoleLoggerImpl(std::size_t queue_size)
     : buffer(std::make_unique<RB<std::string>>(queue_size)),
-      stop_log_thread(false), log_thread(&ConsoleLoggerImpl::store_logs, this) {
-}
+      log_thread(&ConsoleLoggerImpl::store_logs, this) {}
 
 ConsoleLoggerImpl::~ConsoleLoggerImpl() {
     stop_log_thread = true;
@@ -50,8 +53,7 @@ ConsoleLoggerImpl::~ConsoleLoggerImpl() {
 
 void ConsoleLoggerImpl::store_logs() {
     while (!stop_log_thread) {
-        RB<std::string>::Result res =
-            buffer->try_pop(std::chrono::milliseconds(50));
+        RB<std::string>::Result res = buffer->try_pop(store_log_try_duration);
 
         if (!res.err()) {
             fmt::print("{}", res.data());
@@ -79,7 +81,7 @@ void ConsoleLoggerImpl::log(LogLevel loglevel, const std::string& logmsg) {
     buffer->try_push(msg);
 }
 
-std::shared_ptr<Logger> ConsoleLogger(std::size_t queue_size) {
+auto ConsoleLogger(std::size_t queue_size) -> std::shared_ptr<Logger> {
     std::shared_ptr<Logger> ptr(
         std::make_shared<ConsoleLoggerImpl>(queue_size));
     return ptr;
@@ -92,16 +94,16 @@ public:
     FileLoggerImpl(std::size_t queue_size, const std::string& logfile);
     FileLoggerImpl(FileLoggerImpl&&) = delete;
     FileLoggerImpl(const FileLoggerImpl&) = delete;
-    FileLoggerImpl& operator=(FileLoggerImpl&&) = delete;
-    FileLoggerImpl& operator=(const FileLoggerImpl&) = delete;
-    ~FileLoggerImpl();
+    auto operator=(FileLoggerImpl&&) -> FileLoggerImpl& = delete;
+    auto operator=(const FileLoggerImpl&) -> FileLoggerImpl& = delete;
+    ~FileLoggerImpl() override;
 
-    void log(LogLevel loglevel, const std::string& logmsg);
+    void log(LogLevel loglevel, const std::string& logmsg) override;
 
 private:
     std::unique_ptr<RB<std::string>> buffer;
     fmt::ostream file;
-    bool stop_log_thread;
+    bool stop_log_thread{};
     void store_logs();
     std::thread log_thread;
 };
@@ -109,7 +111,7 @@ private:
 FileLoggerImpl::FileLoggerImpl(std::size_t queue_size,
                                const std::string& logfile)
     : buffer(std::make_unique<RB<std::string>>(queue_size)),
-      file(fmt::output_file(logfile)), stop_log_thread(false),
+      file(fmt::output_file(logfile)),
       log_thread(&FileLoggerImpl::store_logs, this) {}
 
 FileLoggerImpl::~FileLoggerImpl() {
@@ -121,8 +123,7 @@ FileLoggerImpl::~FileLoggerImpl() {
 
 void FileLoggerImpl::store_logs() {
     while (!stop_log_thread) {
-        RB<std::string>::Result res =
-            buffer->try_pop(std::chrono::milliseconds(50));
+        RB<std::string>::Result res = buffer->try_pop(store_log_try_duration);
 
         if (!res.err()) {
             file.print("{}", res.data());
@@ -150,8 +151,8 @@ void FileLoggerImpl::log(LogLevel loglevel, const std::string& logmsg) {
     buffer->try_push(msg);
 }
 
-std::shared_ptr<Logger> FileLogger(const std::string& logfile,
-                                   std::size_t queue_size) {
+auto FileLogger(const std::string& logfile,
+                                   std::size_t queue_size) -> std::shared_ptr<Logger> {
     std::shared_ptr<Logger> ptr(
         std::make_shared<FileLoggerImpl>(queue_size, logfile));
     return ptr;

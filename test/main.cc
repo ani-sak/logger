@@ -7,7 +7,7 @@
 #include <cstddef>
 #include <memory>
 
-void test_logger(std::shared_ptr<Logger::Logger> logger, std::size_t log_rounds,
+void test_logger(const std::shared_ptr<Logger::Logger>& logger, std::size_t log_rounds,
                  std::size_t logs_per_round,
                  Logger::LogLevel log_level = Logger::LogLevel::Warn) {
     for (std::size_t rnd = 0; rnd < log_rounds; rnd++) {
@@ -23,9 +23,15 @@ void test_logger(std::shared_ptr<Logger::Logger> logger, std::size_t log_rounds,
     }
 }
 
-int main() {
-    auto logger = Logger::ConsoleLogger(6);
-    auto cout = Logger::FileLogger("testlog.log", 6);
-    test_logger(logger, 3, 10, Logger::LogLevel::Error);
-    test_logger(cout, 3, 10);
+auto main() -> int {
+    // constexpr std::size_t buffer_sizes = 6;
+    // auto logger = Logger::ConsoleLogger(buffer_sizes);
+    // auto cout = Logger::FileLogger("testlog.log", buffer_sizes);
+
+    auto logger = Logger::ConsoleLogger();
+    auto cout = Logger::FileLogger("testlog.log");
+
+    constexpr std::size_t logs_per_round = 10;
+    test_logger(logger, 3, logs_per_round, Logger::LogLevel::Error);
+    test_logger(cout, 3, logs_per_round);
 }
