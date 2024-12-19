@@ -19,6 +19,7 @@ public:
     Logger& operator=(const Logger&) = delete;
     virtual ~Logger() = default;
 
+    // Threadsafe log that minimizes blocking client thread
     virtual void log(LogLevel loglevel, const std::string& logmsg) = 0;
 };
 
