@@ -20,18 +20,18 @@ public:
     class Result {
     public:
         Result(const T& r, bool valid = false) : res(r), valid(valid) {}
-        T data() {
+        T data() const {
             if (!valid) {
                 return {};
             }
 
             return res;
         }
-        bool err() { return !valid; }
+        bool err() const { return !valid; }
 
     private:
         T res;
-        bool valid;
+        const bool valid;
     };
 
     bool try_push(const T& data);
@@ -133,7 +133,7 @@ template <typename T> typename RingBuffer<T>::Result RingBuffer<T>::try_pop() {
         return {T{}, false};
     }
 
-    T retval = pop_impl();
+    const T retval = pop_impl();
     return {retval, true};
 }
 
@@ -149,7 +149,7 @@ RingBuffer<T>::try_pop(const std::chrono::microseconds& duration) {
         }
     }
 
-    T retval = pop_impl();
+    const T retval = pop_impl();
     return {retval, true};
 }
 

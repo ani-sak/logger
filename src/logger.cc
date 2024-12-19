@@ -60,7 +60,7 @@ void ConsoleLoggerImpl::store_logs() {
 }
 
 void ConsoleLoggerImpl::log(LogLevel loglevel, const std::string& logmsg) {
-    auto time_now = std::chrono::system_clock::now();
+    const auto time_now = std::chrono::system_clock::now();
 
     fmt::text_style style;
     switch (loglevel) {
@@ -131,7 +131,7 @@ void FileLoggerImpl::store_logs() {
 }
 
 void FileLoggerImpl::log(LogLevel loglevel, const std::string& logmsg) {
-    auto time_now = std::chrono::system_clock::now();
+    const auto time_now = std::chrono::system_clock::now();
 
     std::string msglabel;
     switch (loglevel) {
