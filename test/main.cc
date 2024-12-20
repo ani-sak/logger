@@ -29,7 +29,7 @@ auto main() -> int {
     // auto cout = Logger::FileLogger("testlog.log", buffer_sizes);
 
     auto logger = Logger::ConsoleLogger();
-    auto cout = Logger::FileLogger("testlog.log");
+    auto cout = Logger::FileLogger("test/testlog.log");
 
     constexpr std::size_t logs_per_round = 10;
     test_logger(logger, 3, logs_per_round, Logger::LogLevel::Error);
