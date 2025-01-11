@@ -7,7 +7,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # [SOURCES]
 set(SOURCE_PREFIX ${CMAKE_CURRENT_LIST_DIR}/src)
-set(SRC ${SOURCE_PREFIX}/logger.cc)
+set(SRC 
+	${SOURCE_PREFIX}/logger.cc
+	${SOURCE_PREFIX}/ConsoleLoggerImpl.cc
+	${SOURCE_PREFIX}/FileLoggerImpl.cc
+)
 
 # [INCLUDES]
 set(INCL ${CMAKE_CURRENT_LIST_DIR}/src)
