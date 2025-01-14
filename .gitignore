@@ -36,3 +36,6 @@
 
 # Clang LSP Cache
 *.cache/
+
+# Test directory
+test/
