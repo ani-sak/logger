@@ -10,7 +10,7 @@ class ConsoleLoggerImpl : public Logger {
 public:
     template <typename T> using RB = Ringbuffer::RingBuffer<T>;
 
-    ConsoleLoggerImpl(std::size_t queue_size);
+    ConsoleLoggerImpl(std::size_t queue_size, LogStrategy log_strategy);
     ConsoleLoggerImpl(ConsoleLoggerImpl&&) = delete;
     ConsoleLoggerImpl(const ConsoleLoggerImpl&) = delete;
     auto operator=(ConsoleLoggerImpl&&) -> ConsoleLoggerImpl& = delete;
@@ -22,6 +22,7 @@ public:
 private:
     std::unique_ptr<RB<std::string>> buffer;
     bool stop_log_thread{};
+    LogStrategy log_strategy;
     void store_logs();
     std::thread log_thread;
 };

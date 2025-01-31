@@ -8,9 +8,10 @@ constexpr auto store_log_try_duration = std::chrono::milliseconds(50);
 } // namespace
 
 FileLoggerImpl::FileLoggerImpl(std::size_t queue_size,
-                               const std::string& logfile)
+                               const std::string& logfile,
+                               LogStrategy log_strategy)
     : buffer(std::make_unique<RB<std::string>>(queue_size)),
-      file(fmt::output_file(logfile)),
+      file(fmt::output_file(logfile)), log_strategy(log_strategy),
       log_thread(&FileLoggerImpl::store_logs, this) {}
 
 FileLoggerImpl::~FileLoggerImpl() {
@@ -47,7 +48,15 @@ void FileLoggerImpl::log(LogLevel loglevel, const std::string& logmsg) {
     }
 
     std::string msg = fmt::format("[{}] {}: {}\n", time_now, msglabel, logmsg);
-    buffer->try_push(msg);
+
+    switch (log_strategy) {
+    case LogStrategy::Blocking:
+        buffer->push(msg);
+        break;
+    case LogStrategy::Immediate:
+        buffer->try_push(msg);
+        break;
+    }
 }
 
 } // namespace Logger

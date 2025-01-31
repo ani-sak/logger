@@ -1,6 +1,7 @@
 #include "ConsoleLoggerImpl.hpp"
-#include "fmt/color.h"
+#include "async_logger/logger.hpp"
 #include "fmt/chrono.h"
+#include "fmt/color.h"
 #include "ringbuffer.hpp"
 #include <memory>
 
@@ -10,8 +11,10 @@ namespace {
 constexpr auto store_log_try_duration = std::chrono::milliseconds(50);
 } // namespace
 
-ConsoleLoggerImpl::ConsoleLoggerImpl(std::size_t queue_size)
+ConsoleLoggerImpl::ConsoleLoggerImpl(std::size_t queue_size,
+                                     LogStrategy log_strategy)
     : buffer(std::make_unique<RB<std::string>>(queue_size)),
+      log_strategy(log_strategy),
       log_thread(&ConsoleLoggerImpl::store_logs, this) {}
 
 ConsoleLoggerImpl::~ConsoleLoggerImpl() {
@@ -48,7 +51,15 @@ void ConsoleLoggerImpl::log(LogLevel loglevel, const std::string& logmsg) {
     }
 
     std::string msg = fmt::format(style, "[{}]: {}\n", time_now, logmsg);
-    buffer->try_push(msg);
+
+    switch (log_strategy) {
+    case LogStrategy::Blocking:
+        buffer->push(msg);
+        break;
+    case LogStrategy::Immediate:
+        buffer->try_push(msg);
+        break;
+    }
 }
 
 } // namespace Logger
