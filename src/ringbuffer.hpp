@@ -20,18 +20,12 @@ public:
     class Result {
     public:
         Result(const T& res, bool valid = false) : res(res), valid(valid) {}
-        auto data() const -> T {
-            if (!valid) {
-                return {};
-            }
-
-            return res;
-        }
+        auto data() const -> T { return (valid ? res : T{}); }
         [[nodiscard]] auto err() const -> bool { return !valid; }
 
     private:
         T res;
-        const bool valid;
+        bool valid;
     };
 
     auto try_push(const T& data) -> bool;
@@ -43,15 +37,14 @@ public:
     auto pop() -> T;
 
 private:
-    std::atomic<size_t> head;
-    std::atomic<size_t> tail;
-    std::atomic<size_t> num_entries;
+    std::atomic<std::size_t> head;
+    std::atomic<std::size_t> tail;
+    std::atomic<std::size_t> num_entries;
 
     const std::size_t buffer_size;
     T* buf;
 
-    std::mutex push_mtx;
-    std::mutex pop_mtx;
+    std::mutex mtx;
 
     std::condition_variable cv_buf_not_full;
     std::condition_variable cv_buf_not_empty;
@@ -79,7 +72,7 @@ template <typename T> void RingBuffer<T>::push_impl(const T& data) {
 }
 
 template <typename T> auto RingBuffer<T>::try_push(const T& data) -> bool {
-    std::lock_guard<std::mutex> lock(push_mtx);
+    std::unique_lock<std::mutex> lock(mtx);
 
     if (num_entries >= buffer_size) {
         return false;
@@ -92,7 +85,7 @@ template <typename T> auto RingBuffer<T>::try_push(const T& data) -> bool {
 template <typename T>
 auto RingBuffer<T>::try_push(
     const T& data, const std::chrono::microseconds& duration) -> bool {
-    std::unique_lock<std::mutex> lock(push_mtx);
+    std::unique_lock<std::mutex> lock(mtx);
 
     if (num_entries >= buffer_size) {
         if (!cv_buf_not_full.wait_for(
@@ -106,7 +99,7 @@ auto RingBuffer<T>::try_push(
 }
 
 template <typename T> void RingBuffer<T>::push(const T& data) {
-    std::unique_lock<std::mutex> lock(push_mtx);
+    std::unique_lock<std::mutex> lock(mtx);
 
     if (num_entries >= buffer_size) {
         cv_buf_not_full.wait(lock,
@@ -125,20 +118,19 @@ template <typename T> auto RingBuffer<T>::pop_impl() -> T {
 }
 
 template <typename T> auto RingBuffer<T>::try_pop() -> RingBuffer<T>::Result {
-    std::lock_guard<std::mutex> lock(pop_mtx);
+    std::unique_lock<std::mutex> lock(mtx);
 
     if (num_entries <= 0) {
         return {T{}, false};
     }
 
-    const T retval = pop_impl();
-    return {retval, true};
+    return {pop_impl(), true};
 }
 
 template <typename T>
 auto RingBuffer<T>::try_pop(const std::chrono::microseconds& duration)
     -> RingBuffer<T>::Result {
-    std::unique_lock<std::mutex> lock(pop_mtx);
+    std::unique_lock<std::mutex> lock(mtx);
 
     if (num_entries <= 0) {
         if (!cv_buf_not_empty.wait_for(lock, duration,
@@ -147,14 +139,13 @@ auto RingBuffer<T>::try_pop(const std::chrono::microseconds& duration)
         }
     }
 
-    const T retval = pop_impl();
-    return {retval, true};
+    return {pop_impl(), true};
 }
 
 template <typename T> auto RingBuffer<T>::pop() -> T {
-    std::unique_lock<std::mutex> lock(pop_mtx);
+    std::unique_lock<std::mutex> lock(mtx);
 
-    if (num_entries == 0) {
+    if (num_entries <= 0) {
         cv_buf_not_empty.wait(lock, [this] { return num_entries > 0; });
     }
 
