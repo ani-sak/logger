@@ -37,5 +37,5 @@
 # Clang LSP Cache
 *.cache/
 
-# Test directory
-test/
+# Compile commands
+*compile_commands.json

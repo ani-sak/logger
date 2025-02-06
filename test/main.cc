@@ -8,7 +8,7 @@
 #include <memory>
 #include <thread>
 
-void test_logger(const std::shared_ptr<Logger::Logger>& logger, std::size_t log_rounds,
+void logger_test_helper(const std::shared_ptr<Logger::Logger>& logger, std::size_t log_rounds,
                  std::size_t logs_per_round,
                  Logger::LogLevel log_level = Logger::LogLevel::Warn) {
     for (std::size_t rnd = 0; rnd < log_rounds; rnd++) {
@@ -24,29 +24,44 @@ void test_logger(const std::shared_ptr<Logger::Logger>& logger, std::size_t log_
     }
 }
 
-auto main() -> int {
-    // constexpr std::size_t buffer_sizes = 6;
-    // auto logger = Logger::ConsoleLogger(buffer_sizes);
-    // auto cout = Logger::FileLogger("testlog.log", buffer_sizes);
-
-    auto cout_1 = Logger::ConsoleLogger();
-    auto cout_2 = Logger::ConsoleLogger();
-    auto file_logger_1 = Logger::FileLogger("test/testlog.log");
-    auto file_logger_2 = Logger::FileLogger("test/testlog.log");
-
+void test_console_logger() {
+    constexpr std::size_t buffer_size = 6;
     constexpr std::size_t logs_per_round = 10;
 
-    std::thread console_log_thread_1(&test_logger, cout_1, 3, logs_per_round,
-                                   Logger::LogLevel::Error);
-    std::thread console_log_thread_2(&test_logger, cout_2, 3, logs_per_round,
-                                     Logger::LogLevel::Warn);
-    std::thread file_log_thread_1(&test_logger, file_logger_1, 3,
-                                  logs_per_round, Logger::LogLevel::Debug);
-    std::thread file_log_thread_2(&test_logger, file_logger_2, 3,
-                                  logs_per_round, Logger::LogLevel::Debug);
+    auto cout_1 =
+        Logger::ConsoleLogger(buffer_size, Logger::LogStrategy::Blocking);
+    auto cout_2 = Logger::ConsoleLogger(buffer_size);
+
+    std::thread console_log_thread_1(&logger_test_helper, cout_1, 3,
+                                     logs_per_round, Logger::LogLevel::Error);
+    std::thread console_log_thread_2(&logger_test_helper, cout_2, 3,
+                                     logs_per_round, Logger::LogLevel::Warn);
 
     console_log_thread_1.join();
     console_log_thread_2.join();
+}
+
+void test_file_logger() {
+    constexpr std::size_t buffer_size = 6;
+    constexpr std::size_t logs_per_round = 50;
+
+    auto filelog_1 = Logger::FileLogger("testlog.log", buffer_size);
+    auto filelog_2 = Logger::FileLogger("testlog.log", buffer_size);
+    auto filelog_3 = Logger::FileLogger("testlog.log", buffer_size);
+
+    std::thread file_log_thread_1(&logger_test_helper, filelog_1, 3,
+                                     logs_per_round, Logger::LogLevel::Error);
+    std::thread file_log_thread_2(&logger_test_helper, filelog_2, 3,
+                                     logs_per_round, Logger::LogLevel::Warn);
+    std::thread file_log_thread_3(&logger_test_helper, filelog_3, 3,
+                                     logs_per_round, Logger::LogLevel::Warn);
+
     file_log_thread_1.join();
     file_log_thread_2.join();
+    file_log_thread_3.join();
+}
+
+auto main() -> int {
+    test_console_logger();
+    test_file_logger();
 }
