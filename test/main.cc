@@ -6,22 +6,26 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
+#include <string>
 #include <thread>
 
 void logger_test_helper(const std::shared_ptr<Logger::Logger>& logger, std::size_t log_rounds,
                  std::size_t logs_per_round,
                  Logger::LogLevel log_level = Logger::LogLevel::Warn) {
+    const auto start_time = std::chrono::high_resolution_clock::now();
+
     for (std::size_t rnd = 0; rnd < log_rounds; rnd++) {
         for (std::size_t logidx = 1; logidx <= logs_per_round; logidx++) {
             logger->log(log_level,
-                        std::to_string(rnd * logs_per_round + logidx));
+                        std::to_string((rnd * logs_per_round) + logidx));
         }
         auto time_now = std::chrono::system_clock::now();
-        std::string msg = fmt::format("Done logging entries: {},{} at {}\n",
-                                      rnd * logs_per_round,
-                                      (rnd + 1) * logs_per_round, time_now);
-        fmt::print(msg);
     }
+
+    const auto end_time = std::chrono::high_resolution_clock::now();
+
+    fmt::print("Logged {} entries in {} \n", log_rounds * logs_per_round,
+               (end_time - start_time));
 }
 
 void test_console_logger() {
@@ -61,7 +65,18 @@ void test_file_logger() {
     file_log_thread_3.join();
 }
 
-auto main() -> int {
-    test_console_logger();
-    test_file_logger();
+auto main(int argc, char* argv[]) -> int {
+    if (argc != 2) {
+        fmt::print("Incorrent arguments provided.\n");
+    }
+
+    if (std::string(argv[1]) == "c") {
+        test_console_logger();
+    }
+
+    else if (std::string(argv[1]) == "f") {
+        test_file_logger();
+    }
+
+    return 0;
 }
