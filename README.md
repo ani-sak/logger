@@ -4,7 +4,7 @@ Simple C++ logging library that minimizes time spent on work threads,
 and performs logging operations in a seperate thread.
 
 ## Dependencies
-- fmt: Format library, statically packaged
+- [fmt](https://github.com/fmtlib/fmt?tab=License-1-ov-file#readme)
 
 ## Usage
 ### Build
