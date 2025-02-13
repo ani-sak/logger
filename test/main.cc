@@ -54,11 +54,11 @@ void test_file_logger() {
     auto filelog_3 = Logger::FileLogger("testlog.log", buffer_size);
 
     std::thread file_log_thread_1(&logger_test_helper, filelog_1, 3,
-                                     logs_per_round, Logger::LogLevel::Error);
+                                  logs_per_round, Logger::LogLevel::Error);
     std::thread file_log_thread_2(&logger_test_helper, filelog_2, 3,
-                                     logs_per_round, Logger::LogLevel::Warn);
+                                  logs_per_round, Logger::LogLevel::Warn);
     std::thread file_log_thread_3(&logger_test_helper, filelog_3, 3,
-                                     logs_per_round, Logger::LogLevel::Warn);
+                                  logs_per_round, Logger::LogLevel::Debug);
 
     file_log_thread_1.join();
     file_log_thread_2.join();
