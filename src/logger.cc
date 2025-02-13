@@ -33,7 +33,7 @@ auto ConsoleLogger(std::size_t queue_size, LogStrategy log_strategy)
 
 auto FileLogger(const std::string& logfile, std::size_t queue_size,
                 LogStrategy log_strategy) -> std::shared_ptr<Logger> {
-    static std::unordered_map<std::string, std::shared_ptr<FileLoggerImpl>>
+    static std::unordered_map<std::string, std::shared_ptr<Logger>>
         file_logger_map;
 
     auto map_entry = file_logger_map.find(logfile);
@@ -41,10 +41,20 @@ auto FileLogger(const std::string& logfile, std::size_t queue_size,
         return map_entry->second;
     }
 
-    auto res = file_logger_map.emplace(
-        logfile,
-        std::make_shared<FileLoggerImpl>(queue_size, logfile, log_strategy));
-    return res.first->second;
+    switch (log_strategy) {
+    case LogStrategy::Blocking: {
+        auto res = file_logger_map.emplace(
+            logfile, std::make_shared<FileLoggerImpl<LogStrategy::Blocking>>(
+                         queue_size, logfile));
+        return res.first->second;
+    }
+    case LogStrategy::Immediate: {
+        auto res = file_logger_map.emplace(
+            logfile, std::make_shared<FileLoggerImpl<LogStrategy::Immediate>>(
+                         queue_size, logfile));
+        return res.first->second;
+    }
+    }
 }
 
 } // namespace Logger
