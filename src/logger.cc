@@ -9,10 +9,25 @@
 
 namespace Logger {
 
-auto ConsoleLogger(std::size_t queue_size,
-                   LogStrategy log_strategy) -> std::shared_ptr<Logger> {
-    static std::shared_ptr<Logger> ptr(
-        std::make_shared<ConsoleLoggerImpl>(queue_size, log_strategy));
+auto ConsoleLogger(std::size_t queue_size, LogStrategy log_strategy)
+    -> std::shared_ptr<Logger> {
+    static std::shared_ptr<Logger> ptr;
+
+    if (ptr) {
+        return ptr;
+    }
+
+    switch (log_strategy) {
+    case LogStrategy::Blocking:
+        ptr = std::make_shared<ConsoleLoggerImpl<LogStrategy::Blocking>>(
+            queue_size);
+        break;
+    case LogStrategy::Immediate:
+        ptr = std::make_shared<ConsoleLoggerImpl<LogStrategy::Immediate>>(
+            queue_size);
+        break;
+    }
+
     return ptr;
 }
 
