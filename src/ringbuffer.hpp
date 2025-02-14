@@ -5,10 +5,13 @@
 #include <condition_variable>
 #include <cstddef>
 #include <mutex>
+#include <type_traits>
+#include <utility>
 
 namespace Ringbuffer {
 
-template <typename T> class RingBuffer {
+template <typename T>
+class RingBuffer {
 public:
     RingBuffer(size_t buffer_size);
     RingBuffer(RingBuffer&&) = delete;
@@ -28,12 +31,19 @@ public:
         bool valid;
     };
 
-    auto try_push(const T& data) -> bool;
-    auto try_push(const T& data,
-                  const std::chrono::microseconds& duration) -> bool;
-    void push(const T& data);
+    template <typename U> // Trigger type deduction for universal refs
+    auto try_push(U&& data) -> bool;
+
+    template <typename U>
+    auto try_push(U&& data, const std::chrono::microseconds& duration) -> bool;
+
+    template <typename U>
+    void push(U&& data);
+
     auto try_pop() -> Result;
+
     auto try_pop(const std::chrono::microseconds& duration) -> Result;
+
     auto pop() -> T;
 
 private:
@@ -49,7 +59,9 @@ private:
     std::condition_variable cv_buf_not_full;
     std::condition_variable cv_buf_not_empty;
 
-    void push_impl(const T& data);
+    template <typename U>
+    void push_impl(U&& data);
+
     auto pop_impl() -> T;
 };
 
@@ -60,31 +72,49 @@ RingBuffer<T>::RingBuffer(size_t buffer_size)
     : head(0), tail(0), num_entries(0), buffer_size(buffer_size),
       buf(new T[buffer_size]) {}
 
-template <typename T> RingBuffer<T>::~RingBuffer() { delete[] buf; }
+template <typename T>
+RingBuffer<T>::~RingBuffer() {
+    delete[] buf;
+}
 
 //===----------------------------------------------------------------------===//
 
-template <typename T> void RingBuffer<T>::push_impl(const T& data) {
-    buf[tail] = data;
+template <typename T>
+template <typename U>
+void RingBuffer<T>::push_impl(U&& data) {
+    static_assert(std::is_assignable_v<T&, U>,
+                  "Cannot push incompatible type U to Ringbuffer of type T");
+
+    buf[tail] = std::forward<U>(data);
     tail = (tail + 1) % buffer_size;
     num_entries++;
     cv_buf_not_empty.notify_one();
 }
 
-template <typename T> auto RingBuffer<T>::try_push(const T& data) -> bool {
+template <typename T>
+template <typename U>
+auto RingBuffer<T>::try_push(U&& data) -> bool {
+    static_assert(std::is_assignable_v<T&, U>,
+                  "Cannot push incompatible type U to Ringbuffer of type T");
+
     std::unique_lock<std::mutex> lock(mtx);
 
     if (num_entries >= buffer_size) {
         return false;
     }
 
-    push_impl(data);
+    push_impl(std::forward<U>(data));
     return true;
 }
 
 template <typename T>
-auto RingBuffer<T>::try_push(
-    const T& data, const std::chrono::microseconds& duration) -> bool {
+template <typename U>
+auto RingBuffer<T>::try_push(U&& data,
+                             const std::chrono::microseconds& duration)
+    -> bool {
+    static_assert(std::is_assignable_v<T&, U>,
+                  "Cannot push incompatible type U to Ringbuffer of type T");
+
     std::unique_lock<std::mutex> lock(mtx);
 
     if (num_entries >= buffer_size) {
@@ -94,11 +124,16 @@ auto RingBuffer<T>::try_push(
         }
     }
 
-    push_impl(data);
+    push_impl(std::forward<U>(data));
     return true;
 }
 
-template <typename T> void RingBuffer<T>::push(const T& data) {
+template <typename T>
+template <typename U>
+void RingBuffer<T>::push(U&& data) {
+    static_assert(std::is_assignable_v<T&, U>,
+                  "Cannot push incompatible type U to Ringbuffer of type T");
+
     std::unique_lock<std::mutex> lock(mtx);
 
     if (num_entries >= buffer_size) {
@@ -106,10 +141,11 @@ template <typename T> void RingBuffer<T>::push(const T& data) {
                              [this] { return num_entries < buffer_size; });
     }
 
-    push_impl(data);
+    push_impl(std::forward<U>(data));
 }
 
-template <typename T> auto RingBuffer<T>::pop_impl() -> T {
+template <typename T>
+auto RingBuffer<T>::pop_impl() -> T {
     std::size_t old_head = head;
     head = (head + 1) % buffer_size;
     num_entries--;
@@ -117,7 +153,8 @@ template <typename T> auto RingBuffer<T>::pop_impl() -> T {
     return buf[old_head];
 }
 
-template <typename T> auto RingBuffer<T>::try_pop() -> RingBuffer<T>::Result {
+template <typename T>
+auto RingBuffer<T>::try_pop() -> RingBuffer<T>::Result {
     std::unique_lock<std::mutex> lock(mtx);
 
     if (num_entries <= 0) {
@@ -142,7 +179,8 @@ auto RingBuffer<T>::try_pop(const std::chrono::microseconds& duration)
     return {pop_impl(), true};
 }
 
-template <typename T> auto RingBuffer<T>::pop() -> T {
+template <typename T>
+auto RingBuffer<T>::pop() -> T {
     std::unique_lock<std::mutex> lock(mtx);
 
     if (num_entries <= 0) {
