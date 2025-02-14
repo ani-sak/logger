@@ -35,8 +35,7 @@ public:
     auto try_push(U&& data) -> bool;
 
     template <typename U>
-    auto try_push(U&& data, const std::chrono::microseconds& duration)
-        -> bool;
+    auto try_push(U&& data, const std::chrono::microseconds& duration) -> bool;
 
     template <typename U>
     void push(U&& data);
@@ -83,7 +82,8 @@ RingBuffer<T>::~RingBuffer() {
 template <typename T>
 template <typename U>
 void RingBuffer<T>::push_impl(U&& data) {
-    static_assert(std::is_assignable_v<T&, U>, "Incompatible types");
+    static_assert(std::is_assignable_v<T&, U>,
+                  "Cannot push incompatible type U to Ringbuffer of type T");
 
     buf[tail] = std::forward<U>(data);
     tail = (tail + 1) % buffer_size;
@@ -94,7 +94,8 @@ void RingBuffer<T>::push_impl(U&& data) {
 template <typename T>
 template <typename U>
 auto RingBuffer<T>::try_push(U&& data) -> bool {
-    static_assert(std::is_assignable_v<T&, U>, "Incompatible types");
+    static_assert(std::is_assignable_v<T&, U>,
+                  "Cannot push incompatible type U to Ringbuffer of type T");
 
     std::unique_lock<std::mutex> lock(mtx);
 
@@ -111,7 +112,8 @@ template <typename U>
 auto RingBuffer<T>::try_push(U&& data,
                              const std::chrono::microseconds& duration)
     -> bool {
-    static_assert(std::is_assignable_v<T&, U>, "Incompatible types");
+    static_assert(std::is_assignable_v<T&, U>,
+                  "Cannot push incompatible type U to Ringbuffer of type T");
 
     std::unique_lock<std::mutex> lock(mtx);
 
@@ -129,7 +131,8 @@ auto RingBuffer<T>::try_push(U&& data,
 template <typename T>
 template <typename U>
 void RingBuffer<T>::push(U&& data) {
-    static_assert(std::is_assignable_v<T&, U>, "Incompatible types");
+    static_assert(std::is_assignable_v<T&, U>,
+                  "Cannot push incompatible type U to Ringbuffer of type T");
 
     std::unique_lock<std::mutex> lock(mtx);
 
