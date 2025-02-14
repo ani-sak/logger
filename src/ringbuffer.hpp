@@ -80,20 +80,10 @@ RingBuffer<T>::~RingBuffer() {
 
 //===----------------------------------------------------------------------===//
 
-namespace {
-template <typename T, typename U>
-class is_compatible
-    : public std::bool_constant<std::is_same_v<std::remove_reference_t<T>,
-                                               std::remove_reference_t<U>> ||
-                                std::is_base_of_v<std::remove_reference_t<T>,
-                                                  std::remove_reference_t<U>>> {
-};
-} // namespace
-
 template <typename T>
 template <typename U>
 void RingBuffer<T>::push_impl(U&& data) {
-    static_assert(is_compatible<T, U>::value, "Incompatible types");
+    static_assert(std::is_assignable_v<T&, U>, "Incompatible types");
 
     buf[tail] = std::forward<U>(data);
     tail = (tail + 1) % buffer_size;
@@ -104,7 +94,7 @@ void RingBuffer<T>::push_impl(U&& data) {
 template <typename T>
 template <typename U>
 auto RingBuffer<T>::try_push(U&& data) -> bool {
-    static_assert(is_compatible<T, U>::value, "Incompatible types");
+    static_assert(std::is_assignable_v<T&, U>, "Incompatible types");
 
     std::unique_lock<std::mutex> lock(mtx);
 
@@ -121,7 +111,7 @@ template <typename U>
 auto RingBuffer<T>::try_push(U&& data,
                              const std::chrono::microseconds& duration)
     -> bool {
-    static_assert(is_compatible<T, U>::value, "Incompatible types");
+    static_assert(std::is_assignable_v<T&, U>, "Incompatible types");
 
     std::unique_lock<std::mutex> lock(mtx);
 
@@ -139,7 +129,7 @@ auto RingBuffer<T>::try_push(U&& data,
 template <typename T>
 template <typename U>
 void RingBuffer<T>::push(U&& data) {
-    static_assert(is_compatible<T, U>::value, "Incompatible types");
+    static_assert(std::is_assignable_v<T&, U>, "Incompatible types");
 
     std::unique_lock<std::mutex> lock(mtx);
 
