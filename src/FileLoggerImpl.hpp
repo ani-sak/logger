@@ -76,7 +76,7 @@ auto get_logmsg_label(LogLevel loglevel) -> std::string_view {
 } // namespace
 
 template <>
-void FileLoggerImpl<LogStrategy::Blocking>::log(LogLevel loglevel,
+inline void FileLoggerImpl<LogStrategy::Blocking>::log(LogLevel loglevel,
                                                 const std::string& logmsg) {
     const auto time_now = std::chrono::system_clock::now();
 
@@ -87,7 +87,7 @@ void FileLoggerImpl<LogStrategy::Blocking>::log(LogLevel loglevel,
 }
 
 template <>
-void FileLoggerImpl<LogStrategy::Immediate>::log(LogLevel loglevel,
+inline void FileLoggerImpl<LogStrategy::Immediate>::log(LogLevel loglevel,
                                                  const std::string& logmsg) {
     const auto time_now = std::chrono::system_clock::now();
 
