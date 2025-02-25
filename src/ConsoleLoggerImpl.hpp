@@ -63,19 +63,19 @@ namespace {
 constexpr auto get_text_style(LogLevel loglevel) -> fmt::text_style {
     switch (loglevel) {
     case LogLevel::Debug:
-        return fmt::text_style();
+        return {};
     case LogLevel::Warn:
         return fmt::fg(fmt::color::yellow);
     case LogLevel::Error:
         return fmt::fg(fmt::color::red);
     }
 
-    return fmt::text_style();
+    return {};
 }
 } // namespace
 
 template <>
-void ConsoleLoggerImpl<LogStrategy::Blocking>::log(LogLevel loglevel,
+inline void ConsoleLoggerImpl<LogStrategy::Blocking>::log(LogLevel loglevel,
                                                    const std::string& logmsg) {
     const auto time_now = std::chrono::system_clock::now();
 
@@ -86,7 +86,7 @@ void ConsoleLoggerImpl<LogStrategy::Blocking>::log(LogLevel loglevel,
 }
 
 template <>
-void ConsoleLoggerImpl<LogStrategy::Immediate>::log(LogLevel loglevel,
+inline void ConsoleLoggerImpl<LogStrategy::Immediate>::log(LogLevel loglevel,
                                                     const std::string& logmsg) {
     const auto time_now = std::chrono::system_clock::now();
 
