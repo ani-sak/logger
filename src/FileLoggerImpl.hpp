@@ -29,7 +29,7 @@ public:
 private:
     std::unique_ptr<RB<std::string>> buffer;
     fmt::ostream file;
-    bool stop_log_thread{};
+    std::atomic_bool stop_log_thread{};
     void store_logs();
     std::thread log_thread;
     std::string_view get_logmsg_label(LogLevel loglevel);

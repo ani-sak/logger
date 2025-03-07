@@ -4,8 +4,10 @@
 #include "fmt/color.h"
 #include "fmt/chrono.h"
 #include "ringbuffer.hpp"
+#include <atomic>
 #include <cmath>
 #include <memory>
+#include <stdatomic.h>
 #include <string>
 #include <thread>
 
@@ -28,7 +30,7 @@ public:
 
 private:
     std::unique_ptr<RB<std::string>> buffer;
-    bool stop_log_thread{};
+    std::atomic_bool stop_log_thread{};
     void store_logs();
     std::thread log_thread;
     constexpr auto get_text_style(LogLevel loglevel) -> fmt::text_style;
