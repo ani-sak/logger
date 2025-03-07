@@ -31,6 +31,7 @@ private:
     bool stop_log_thread{};
     void store_logs();
     std::thread log_thread;
+    constexpr auto get_text_style(LogLevel loglevel) -> fmt::text_style;
 };
 
 template <LogStrategy L>
@@ -59,8 +60,9 @@ void ConsoleLoggerImpl<L>::store_logs() {
     }
 }
 
-namespace {
-constexpr auto get_text_style(LogLevel loglevel) -> fmt::text_style {
+template <LogStrategy L>
+constexpr auto ConsoleLoggerImpl<L>::get_text_style(LogLevel loglevel)
+    -> fmt::text_style {
     switch (loglevel) {
     case LogLevel::Debug:
         return {};
@@ -72,7 +74,6 @@ constexpr auto get_text_style(LogLevel loglevel) -> fmt::text_style {
 
     return {};
 }
-} // namespace
 
 template <>
 inline void ConsoleLoggerImpl<LogStrategy::Blocking>::log(LogLevel loglevel,
