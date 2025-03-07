@@ -9,8 +9,15 @@ seperate thread to minimize load on working threads.
 
 ## Usage 
 ### Building 
-The CMake file statically builds the logger. To add it to
-your project simply add the following line to your `CMakeLists.txt':
+The `CMakeLists.txt` file statically builds the logger.
+
+Use the following command to build the logger within your project, where
+`LOGGER_PATH` is the path to the folder containing the logger `CMakeLists.txt`
+file:
+```
+add_subdirectory(LOGGER_PATH)
+```
+To then use the logger in target `target_name`, add the following line to your `CMakeLists.txt`:
 ```
 target_link_libraries(target_name PRIVATE async_logger)
 ```
