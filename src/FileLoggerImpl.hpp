@@ -32,6 +32,7 @@ private:
     bool stop_log_thread{};
     void store_logs();
     std::thread log_thread;
+    std::string_view get_logmsg_label(LogLevel loglevel);
 };
 
 template <LogStrategy L>
@@ -62,8 +63,8 @@ void FileLoggerImpl<L>::store_logs() {
     }
 }
 
-namespace {
-auto get_logmsg_label(LogLevel loglevel) -> std::string_view {
+template <LogStrategy L>
+std::string_view FileLoggerImpl<L>::get_logmsg_label(LogLevel loglevel) {
     switch (loglevel) {
     case LogLevel::Debug:
         return "Debug";
@@ -73,11 +74,11 @@ auto get_logmsg_label(LogLevel loglevel) -> std::string_view {
         return "Error";
     }
 }
-} // namespace
 
 template <>
-inline void FileLoggerImpl<LogStrategy::Blocking>::log(LogLevel loglevel,
-                                                const std::string& logmsg) {
+inline void
+FileLoggerImpl<LogStrategy::Blocking>::log(LogLevel loglevel,
+                                           const std::string& logmsg) {
     const auto time_now = std::chrono::system_clock::now();
 
     std::string_view msglabel = get_logmsg_label(loglevel);
@@ -87,8 +88,9 @@ inline void FileLoggerImpl<LogStrategy::Blocking>::log(LogLevel loglevel,
 }
 
 template <>
-inline void FileLoggerImpl<LogStrategy::Immediate>::log(LogLevel loglevel,
-                                                 const std::string& logmsg) {
+inline void
+FileLoggerImpl<LogStrategy::Immediate>::log(LogLevel loglevel,
+                                            const std::string& logmsg) {
     const auto time_now = std::chrono::system_clock::now();
 
     std::string_view msglabel = get_logmsg_label(loglevel);
