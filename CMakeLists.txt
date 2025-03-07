@@ -27,5 +27,9 @@ target_include_directories(async_logger
 	PUBLIC ${LIB_INCL})
 target_link_libraries(async_logger PRIVATE pthread fmt::fmt)
 
-add_executable(async_logger_test ${CMAKE_CURRENT_LIST_DIR}/test/main.cc)
-target_link_libraries(async_logger_test PRIVATE async_logger fmt::fmt)
+option(LOGGER_BUILD_TESTS "Build tests")
+if (${LOGGER_BUILD_TESTS})
+	message(STATUS "Building logger tests")
+	add_executable(async_logger_test ${CMAKE_CURRENT_LIST_DIR}/test/main.cc)
+	target_link_libraries(async_logger_test PRIVATE async_logger fmt::fmt)
+endif()
