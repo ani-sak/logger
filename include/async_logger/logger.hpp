@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ASYNC_LOGGER_LOGGER_HPP
+#define ASYNC_LOGGER_LOGGER_HPP
 
 #include <cstddef>
 #include <memory>
@@ -35,3 +36,5 @@ auto FileLogger(const std::string& logfile,
     -> std::shared_ptr<Logger>;
 
 } // namespace Logger
+
+#endif // !ASYNC_LOGGER_LOGGER_HPP

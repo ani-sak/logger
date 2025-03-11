@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FILE_LOGGER_IMPL_HPP
+#define FILE_LOGGER_IMPL_HPP
 
 #include "async_logger/logger.hpp"
 #include "fmt/os.h"
@@ -101,3 +102,5 @@ FileLoggerImpl<LogStrategy::Immediate>::log(LogLevel loglevel,
 }
 
 } // namespace Logger
+
+#endif // !FILE_LOGGER_IMPL_HPP

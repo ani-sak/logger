@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef RINGBUFFER_HPP
+#define RINGBUFFER_HPP
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -191,3 +194,5 @@ auto RingBuffer<T>::pop() -> T {
 }
 
 } // namespace Ringbuffer
+
+#endif // !RINGBUFFER_HPP
