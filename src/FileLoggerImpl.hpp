@@ -4,6 +4,7 @@
 #include "fmt/os.h"
 #include "ringbuffer.hpp"
 
+#include <atomic>
 #include <cstddef>
 #include <string>
 #include <string_view>

@@ -4,10 +4,9 @@
 #include "fmt/color.h"
 #include "fmt/chrono.h"
 #include "ringbuffer.hpp"
+
 #include <atomic>
-#include <cmath>
 #include <memory>
-#include <stdatomic.h>
 #include <string>
 #include <thread>
 
