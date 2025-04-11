@@ -1,7 +1,7 @@
 #ifndef FILE_LOGGER_THREAD_HPP
 #define FILE_LOGGER_THREAD_HPP
 
-#include "FileLoggerImpl.hpp"
+#include "file_logger_impl.hpp"
 #include "async_logger/logger.hpp"
 
 #include <memory>

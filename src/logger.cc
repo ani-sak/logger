@@ -1,7 +1,7 @@
 #include "async_logger/logger.hpp"
-#include "ConsoleLoggerImpl.hpp"
-#include "FileLoggerImpl.hpp"
-#include "FileLoggerThread.hpp"
+#include "console_logger_impl.hpp"
+#include "file_logger_impl.hpp"
+#include "file_logger_thread.hpp"
 
 #include <cstddef>
 #include <memory>

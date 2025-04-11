@@ -1,4 +1,4 @@
-#include "FileLoggerThread.hpp"
+#include "file_logger_thread.hpp"
 #include "fmt/os.h"
 
 namespace Logger {
