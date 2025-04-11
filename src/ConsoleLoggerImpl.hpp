@@ -1,8 +1,9 @@
-#pragma once
+#ifndef CONSOLE_LOGGER_IMPL_HPP
+#define CONSOLE_LOGGER_IMPL_HPP
 
 #include "async_logger/logger.hpp"
-#include "fmt/color.h"
 #include "fmt/chrono.h"
+#include "fmt/color.h"
 #include "ringbuffer.hpp"
 
 #include <atomic>
@@ -77,8 +78,9 @@ constexpr auto ConsoleLoggerImpl<L>::get_text_style(LogLevel loglevel)
 }
 
 template <>
-inline void ConsoleLoggerImpl<LogStrategy::Blocking>::log(LogLevel loglevel,
-                                                   const std::string& logmsg) {
+inline void
+ConsoleLoggerImpl<LogStrategy::Blocking>::log(LogLevel loglevel,
+                                              const std::string& logmsg) {
     const auto time_now = std::chrono::system_clock::now();
 
     fmt::text_style style = get_text_style(loglevel);
@@ -88,8 +90,9 @@ inline void ConsoleLoggerImpl<LogStrategy::Blocking>::log(LogLevel loglevel,
 }
 
 template <>
-inline void ConsoleLoggerImpl<LogStrategy::Immediate>::log(LogLevel loglevel,
-                                                    const std::string& logmsg) {
+inline void
+ConsoleLoggerImpl<LogStrategy::Immediate>::log(LogLevel loglevel,
+                                               const std::string& logmsg) {
     const auto time_now = std::chrono::system_clock::now();
 
     fmt::text_style style = get_text_style(loglevel);
@@ -99,3 +102,5 @@ inline void ConsoleLoggerImpl<LogStrategy::Immediate>::log(LogLevel loglevel,
 }
 
 } // namespace Logger
+
+#endif // !CONSOLE_LOGGER_IMPL_HPP
