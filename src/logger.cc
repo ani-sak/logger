@@ -1,16 +1,13 @@
 #include "async_logger/logger.hpp"
 #include "ConsoleLoggerImpl.hpp"
 #include "FileLoggerImpl.hpp"
-#include "ringbuffer.hpp"
+#include "FileLoggerThread.hpp"
 
-#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <mutex>
 #include <string>
-#include <thread>
 #include <unordered_map>
-#include <vector>
 
 namespace Logger {
 
