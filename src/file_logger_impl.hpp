@@ -3,19 +3,17 @@
 
 #include "async_logger/logger.hpp"
 #include "fmt/os.h"
+#include "fmt/chrono.h"
 #include "ringbuffer.hpp"
 
-#include <atomic>
 #include <cstddef>
 #include <string>
 #include <string_view>
-#include <thread>
 
 namespace Logger {
 
 template <LogStrategy L>
-class FileLoggerImpl : public Logger {
-public:
+struct FileLoggerImpl : public Logger {
     template <typename T>
     using RB = Ringbuffer::RingBuffer<T>;
 
@@ -24,49 +22,24 @@ public:
     FileLoggerImpl(const FileLoggerImpl&) = delete;
     auto operator=(FileLoggerImpl&&) -> FileLoggerImpl& = delete;
     auto operator=(const FileLoggerImpl&) -> FileLoggerImpl& = delete;
-    ~FileLoggerImpl() override;
+    ~FileLoggerImpl() override = default;
 
     void log(LogLevel loglevel, const std::string& logmsg) override;
 
-private:
     std::unique_ptr<RB<std::string>> buffer;
     fmt::ostream file;
-    std::atomic_bool stop_log_thread{};
-    void store_logs();
-    std::thread log_thread;
-    std::string_view get_logmsg_label(LogLevel loglevel);
+    auto get_logmsg_label(LogLevel loglevel) -> std::string_view;
 };
 
 template <LogStrategy L>
 FileLoggerImpl<L>::FileLoggerImpl(std::size_t queue_size,
                                   const std::string& logfile)
     : buffer(std::make_unique<RB<std::string>>(queue_size)),
-      file(fmt::output_file(logfile)),
-      log_thread(&FileLoggerImpl<L>::store_logs, this) {}
+      file(fmt::output_file(logfile)) {}
 
 template <LogStrategy L>
-FileLoggerImpl<L>::~FileLoggerImpl() {
-    stop_log_thread = true;
-    if (log_thread.joinable()) {
-        log_thread.join();
-    }
-}
-
-template <LogStrategy L>
-void FileLoggerImpl<L>::store_logs() {
-    constexpr auto store_log_try_duration = std::chrono::milliseconds(50);
-
-    while (!stop_log_thread) {
-        RB<std::string>::Result res = buffer->try_pop(store_log_try_duration);
-
-        if (!res.err()) {
-            file.print("{}", res.data());
-        }
-    }
-}
-
-template <LogStrategy L>
-std::string_view FileLoggerImpl<L>::get_logmsg_label(LogLevel loglevel) {
+auto FileLoggerImpl<L>::get_logmsg_label(LogLevel loglevel)
+    -> std::string_view {
     switch (loglevel) {
     case LogLevel::Debug:
         return "Debug";
@@ -100,6 +73,7 @@ FileLoggerImpl<LogStrategy::Immediate>::log(LogLevel loglevel,
 
     buffer->try_push(msg);
 }
+
 
 } // namespace Logger
 
