@@ -16,11 +16,12 @@ target_include_directories(async_logger
 
 # [LIBRARIES]
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt)
+find_package(Threads REQUIRED)
 
 target_link_libraries(async_logger
 	PRIVATE
-	pthread
 	fmt::fmt
+	Threads::Threads
 )
 
 target_compile_features(async_logger
