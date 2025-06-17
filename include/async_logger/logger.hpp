@@ -37,4 +37,27 @@ auto FileLogger(const std::string& logfile,
 
 } // namespace Logger
 
+
+namespace AsyncLogger {
+
+constexpr std::size_t default_buffer_size = 64;
+constexpr std::size_t default_entry_size = 1024;
+
+enum class LogLevel { Debug, Warn, Error };
+
+// Forward declaration
+class Buffer;
+
+auto create_buffer(std::size_t buffer_size = default_buffer_size,
+                   std::size_t entry_size = default_entry_size) -> std::shared_ptr<Buffer>;
+
+auto create_buffer(const std::string& logfile,
+                   std::size_t buffer_size = default_buffer_size,
+                   std::size_t entry_size = default_entry_size) -> std::shared_ptr<Buffer>;
+
+auto log(Buffer& buffer, LogLevel loglevel, const std::string& logmsg) -> bool;
+
+auto flush(Buffer& buffer) -> bool;
+} // namespace AsyncLogger
+
 #endif // !ASYNC_LOGGER_LOGGER_HPP

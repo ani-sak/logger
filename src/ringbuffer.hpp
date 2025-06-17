@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #ifndef RINGBUFFER_HPP
 #define RINGBUFFER_HPP
 
@@ -22,6 +23,8 @@ public:
     auto operator=(RingBuffer&&) -> RingBuffer& = delete;
     auto operator=(const RingBuffer&) -> RingBuffer& = delete;
     ~RingBuffer();
+
+    auto map(std::function<void(T)> operation) -> void;
 
     class Result {
     public:
@@ -78,6 +81,15 @@ RingBuffer<T>::RingBuffer(size_t buffer_size)
 template <typename T>
 RingBuffer<T>::~RingBuffer() {
     delete[] buf;
+}
+
+//===----------------------------------------------------------------------===//
+
+template <typename T>
+auto RingBuffer<T>::map(std::function<void(T)> operation) -> void {
+    for (std::size_t i = 0; i < buffer_size; ++i) {
+        operation(buf[i]);
+    }
 }
 
 //===----------------------------------------------------------------------===//
