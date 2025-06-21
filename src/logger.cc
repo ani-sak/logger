@@ -11,7 +11,6 @@
 #include <memory>
 #include <mutex>
 #include <string>
-#include <unordered_map>
 #include <utility>
 
 namespace Logger {
@@ -85,7 +84,8 @@ auto FileLogger(const std::string& logfile, std::size_t queue_size,
 namespace AsyncLogger {
 
 struct LogEntry {
-    LogLevel log_level;
+    // LogLevel log_level;
+    AsyncLogger::LogLevel log_level;
     std::string log_msg;
 
     LogEntry() = default;
@@ -123,23 +123,23 @@ public:
 };
 
 auto create_buffer(std::size_t buffer_size, std::size_t entry_size)
-    -> std::shared_ptr<Buffer> {
+    -> SharedPtrBuffer {
     return std::make_shared<Buffer>(buffer_size, entry_size);
 }
 
 auto create_buffer(const std::string& logfile, std::size_t buffer_size,
-                   std::size_t entry_size) -> std::shared_ptr<Buffer> {
+                   std::size_t entry_size) -> SharedPtrBuffer {
     return std::make_shared<Buffer>(logfile, buffer_size, entry_size);
 }
 
-auto log(Buffer& buffer, LogLevel loglevel, const std::string& logmsg) -> bool {
-    return buffer.ringbuffer.try_push(LogEntry{loglevel, logmsg});
+auto log(SharedPtrBuffer buffer, LogLevel loglevel, const std::string& logmsg) -> bool {
+    return buffer->ringbuffer.try_push(LogEntry{loglevel, logmsg});
 }
 
-auto flush(Buffer& buffer) -> bool {
-    RB::Result res = buffer.ringbuffer.try_pop();
+auto flush(SharedPtrBuffer buffer) -> bool {
+    RB::Result res = buffer->ringbuffer.try_pop();
 
-    if (buffer.log_location == LogLocation::Term) {
+    if (buffer->log_location == LogLocation::Term) {
         while (!res.err()) {
             LogEntry log_entry{res.data()};
 
@@ -158,12 +158,12 @@ auto flush(Buffer& buffer) -> bool {
 
             fmt::print(fmt::format(style, "{} \n", log_entry.log_msg));
 
-            res = buffer.ringbuffer.try_pop();
+            res = buffer->ringbuffer.try_pop();
         }
     }
 
-    if (buffer.log_location == LogLocation::File) {
-        fmt::ostream ofs{fmt::output_file(buffer.logfile)};
+    if (buffer->log_location == LogLocation::File) {
+        fmt::ostream ofs{fmt::output_file(buffer->logfile)};
 
         while (!res.err()) {
             LogEntry log_entry{res.data()};
@@ -180,7 +180,7 @@ auto flush(Buffer& buffer) -> bool {
 
             ofs.print("{}: {} \n", log_prefix, log_entry.log_msg);
 
-            res = buffer.ringbuffer.try_pop();
+            res = buffer->ringbuffer.try_pop();
         }
     }
 

@@ -63,31 +63,44 @@ auto get_level(std::size_t i) -> Logger::LogLevel {
     }
 }
 
-auto main(int  /*argc*/, char*  /*argv*/[]) -> int {
-    constexpr int num_threads_test_console_logger = 3;
-    constexpr int num_threads_test_file_logger = 3;
+// auto main(int  /*argc*/, char*  /*argv*/[]) -> int {
+//     constexpr int num_threads_test_console_logger = 3;
+//     constexpr int num_threads_test_file_logger = 3;
+//
+//     std::array<std::thread, num_threads_test_console_logger>
+//         console_logger_threads;
+//     std::array<std::thread, num_threads_test_file_logger> file_logger_threads;
+//
+//     constexpr Logger::LogStrategy test_strat = Logger::LogStrategy::Blocking;
+//
+//     for (std::size_t i = 0; i < num_threads_test_console_logger; ++i) {
+//         console_logger_threads[i] =
+//             std::thread{&Test::test_console_logger, test_strat, get_level(i)};
+//     }
+//
+//     for (std::size_t i = 0; i < num_threads_test_file_logger; ++i) {
+//         file_logger_threads[i] =
+//             std::thread{&Test::test_file_logger, test_strat, get_level(i)};
+//     }
+//
+//     for (std::size_t i = 0; i < num_threads_test_console_logger; ++i) {
+//         console_logger_threads[i].join();
+//     }
+//
+//     for (std::size_t i = 0; i < num_threads_test_file_logger; ++i) {
+//         file_logger_threads[i].join();
+//     }
+// }
 
-    std::array<std::thread, num_threads_test_console_logger>
-        console_logger_threads;
-    std::array<std::thread, num_threads_test_file_logger> file_logger_threads;
+ auto main (int  /*argc*/, char * /*argv*/[]) -> int {
+    auto buf = AsyncLogger::create_buffer(98);
 
-    constexpr Logger::LogStrategy test_strat = Logger::LogStrategy::Blocking;
-
-    for (std::size_t i = 0; i < num_threads_test_console_logger; ++i) {
-        console_logger_threads[i] =
-            std::thread{&Test::test_console_logger, test_strat, get_level(i)};
+    for (std::size_t idx = 0; idx < 50; ++idx) {
+        AsyncLogger::log(buf, AsyncLogger::LogLevel::Error,
+                         std::to_string(idx));
     }
 
-    for (std::size_t i = 0; i < num_threads_test_file_logger; ++i) {
-        file_logger_threads[i] =
-            std::thread{&Test::test_file_logger, test_strat, get_level(i)};
-    }
+    AsyncLogger::flush(buf);
 
-    for (std::size_t i = 0; i < num_threads_test_console_logger; ++i) {
-        console_logger_threads[i].join();
-    }
-
-    for (std::size_t i = 0; i < num_threads_test_file_logger; ++i) {
-        file_logger_threads[i].join();
-    }
+    return 0;
 }
