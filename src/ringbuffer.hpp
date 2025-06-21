@@ -1,9 +1,7 @@
-#pragma once
-
-#include <functional>
 #ifndef RINGBUFFER_HPP
 #define RINGBUFFER_HPP
 
+#include <functional>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
