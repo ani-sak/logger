@@ -21,10 +21,10 @@ struct LogEntry {
     LogEntry(LogLevel log_level, T&& log_msg)
         : log_level{log_level}, log_msg{std::forward<T>(log_msg)} {}
 
-    LogEntry(LogEntry &&) = default;
-    LogEntry(const LogEntry &) = default;
-    auto operator=(LogEntry &&) -> LogEntry & = default;
-    auto operator=(const LogEntry &) -> LogEntry & = default;
+    LogEntry(LogEntry&&) = default;
+    LogEntry(const LogEntry&) = default;
+    auto operator=(LogEntry&&) -> LogEntry& = default;
+    auto operator=(const LogEntry&) -> LogEntry& = default;
     ~LogEntry() = default;
 };
 
@@ -57,21 +57,21 @@ public:
 };
 
 auto create_buffer(std::size_t buffer_size, std::size_t entry_size)
-    -> SharedPtrBuffer {
+    -> std::shared_ptr<Buffer> {
     return std::make_shared<Buffer>(buffer_size, entry_size);
 }
 
 auto create_buffer(const std::string& logfile, std::size_t buffer_size,
-                   std::size_t entry_size) -> SharedPtrBuffer {
+                   std::size_t entry_size) -> std::shared_ptr<Buffer> {
     return std::make_shared<Buffer>(logfile, buffer_size, entry_size);
 }
 
-auto log(SharedPtrBuffer buffer, LogLevel loglevel, const std::string& logmsg)
-    -> bool {
+auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel,
+         const std::string& logmsg) -> bool {
     return buffer->ringbuffer.try_push(LogEntry{loglevel, logmsg});
 }
 
-auto flush(SharedPtrBuffer buffer) -> bool {
+auto flush(std::shared_ptr<Buffer> buffer) -> bool {
     RB::Result res = buffer->ringbuffer.try_pop();
 
     if (buffer->log_location == LogLocation::Term) {
@@ -106,7 +106,7 @@ auto flush(SharedPtrBuffer buffer) -> bool {
             std::string log_prefix;
             switch (log_entry.log_level) {
             case LogLevel::Debug:
-                log_prefix =  "Debug";
+                log_prefix = "Debug";
             case LogLevel::Warn:
                 log_prefix = "Warn";
             case LogLevel::Error:
