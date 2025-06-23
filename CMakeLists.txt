@@ -6,7 +6,6 @@ add_library(async_logger STATIC)
 target_sources(async_logger
 	PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/src/logger.cc
-	${CMAKE_CURRENT_LIST_DIR}/src/file_logger_thread.cc
 )
 
 target_include_directories(async_logger

@@ -22,6 +22,8 @@ public:
     auto operator=(const RingBuffer&) -> RingBuffer& = delete;
     ~RingBuffer();
 
+    // Allow allocation/reservation and initialization of memory when T is a
+    // RAII type
     auto map(std::function<void(T)> operation) -> void;
 
     class Result {
