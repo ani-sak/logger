@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(AsyncLogger VERSION 0.0.3)
+project(AsyncLogger VERSION 0.1.0)
 
 add_library(async_logger STATIC)
 
