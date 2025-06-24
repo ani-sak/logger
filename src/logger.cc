@@ -49,8 +49,19 @@ auto create_buffer(std::size_t buffer_size, std::size_t entry_size)
     return std::make_shared<Buffer>(buffer_size, entry_size);
 }
 
+namespace {
+LogLevel log_level_program = LogLevel::Debug;
+}
+
+auto set_log_level(LogLevel log_level) -> void {
+    log_level_program = log_level;
+}
+
 auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel,
          const std::string& logmsg) -> bool {
+    if (log_level_program < loglevel) {
+        return false;
+    }
     return buffer->ringbuffer.try_push(LogEntry{loglevel, logmsg});
 }
 

@@ -10,7 +10,9 @@ namespace AsyncLogger {
 constexpr std::size_t default_buffer_size = 64;
 constexpr std::size_t default_entry_size = 1024;
 
-enum class LogLevel { Debug, Warn, Error };
+enum class LogLevel { Error, Warn, Debug };
+
+auto set_log_level(LogLevel log_level) -> void;
 
 class Buffer; // Forward Declaration
 

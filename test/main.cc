@@ -11,6 +11,8 @@ auto log_file_threaded() -> void{}
 }
 
 auto main(int /*argc*/, char* /*argv*/[]) -> int {
+    // AsyncLogger::set_log_level(AsyncLogger::LogLevel::Error);
+
     auto buf_term = AsyncLogger::create_buffer(100);
 
     for (std::size_t idx = 0; idx < 500; ++idx) {
