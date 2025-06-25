@@ -5,6 +5,7 @@
 #include "ringbuffer.hpp"
 
 #include <cstddef>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -99,8 +100,11 @@ auto flush(std::shared_ptr<Buffer> buffer) -> bool {
 }
 
 namespace {
+std::mutex map_mutex{};
+
 auto get_logfile_mutex(const std::string& logfile) -> std::mutex& {
-    static std::unordered_map<std::string, std::mutex> logfile_mutex_map{};
+    std::lock_guard<std::mutex> lock{map_mutex};
+    static std::map<std::string, std::mutex> logfile_mutex_map{};
     return logfile_mutex_map[logfile];
 }
 } // namespace
