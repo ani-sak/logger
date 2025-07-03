@@ -15,6 +15,9 @@ enum class LogLevel { Error, Warn, Debug };
 auto set_log_level(LogLevel log_level) -> void;
 
 class Buffer; // Forward Declaration
+// Abstract buffer for cleaner interface.
+// This can be done using shared ptr or pImpl.
+// Choose shared ptr approach for code reuse.
 
 auto create_buffer(std::size_t buffer_size = default_buffer_size,
                    std::size_t entry_size = default_entry_size)

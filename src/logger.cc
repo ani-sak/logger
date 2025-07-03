@@ -24,9 +24,12 @@ struct LogEntry {
     LogEntry(LogLevel log_level, T&& log_msg)
         : log_level{log_level}, log_msg{std::forward<T>(log_msg)} {}
 
+    // Implicitly declared+defined move ctor, move-assignment operator
+    // Perform member-wise moves, move-assignment on rvalues
     LogEntry(LogEntry&&) = default;
-    LogEntry(const LogEntry&) = default;
     auto operator=(LogEntry&&) -> LogEntry& = default;
+
+    LogEntry(const LogEntry&) = default;
     auto operator=(const LogEntry&) -> LogEntry& = default;
     ~LogEntry() = default;
 };
@@ -63,6 +66,8 @@ auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel,
     if (log_level_program < loglevel) {
         return false;
     }
+
+    // Pass LogEntry rvalue, which is "perfect forwarded" in try_push call
     return buffer->ringbuffer.try_push(LogEntry{loglevel, logmsg});
 }
 
