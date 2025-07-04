@@ -9,11 +9,11 @@
 #include <memory>
 #include <mutex>
 #include <string>
-#include <unordered_map>
 #include <utility>
 
 namespace AsyncLogger {
 
+// store logmsg as std::string for short-string-optimization (SSO)
 struct LogEntry {
     LogLevel log_level;
     std::string log_msg;
@@ -63,6 +63,16 @@ auto set_log_level(LogLevel log_level) -> void {
 
 auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel,
          const std::string& logmsg) -> bool {
+    if (log_level_program < loglevel) {
+        return false;
+    }
+
+    // Pass LogEntry rvalue, which is "perfect forwarded" in try_push call
+    return buffer->ringbuffer.try_push(LogEntry{loglevel, logmsg});
+}
+
+auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel, const char* logmsg)
+    -> bool {
     if (log_level_program < loglevel) {
         return false;
     }
