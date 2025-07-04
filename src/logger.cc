@@ -12,6 +12,64 @@
 #include <utility>
 
 namespace AsyncLogger {
+// The goal is to minimize unnecessary operations when creating buffer entry
+// from log function.
+// Need to prepend loglevel info.
+//
+// Approach 1: Ringbuffer of std::string type
+//  Here the loglevel info is stored into a string.
+//  Need to create string temporary, convert loglevel to string
+//
+// Approach 2: Ringbuffer of LogEntry type (see analysis below)
+//
+// Both approaches need creation of a temporary.
+//
+// Approach 2
+// Log overload taking std::string logmsg will bind passed param (lvalue or
+// std::string rvalue) to fxn param (std::string const-ref lvalue).
+// LogEntry rvalue is created.
+//  LogEntry ctor perfect forwards function param logmsg.
+//  Note logmsg is lvalue so it is always copied to LogEntry rvalue. (BAD)
+//  We want string rvalues to be moved (TODO)
+// LogEntry rvalue passed to try_push.
+//  try_push forwards LogEntry to push_impl
+//  push_impl uses move-assignment to place LogEntry rvalue in buffer
+//      move-assignment does element wise move-assignment
+//      i.e. string is moved into buffer
+// LogEntry rvalue destroyed (BAD)
+//
+// Log overload taking const char* logmsg only called when const char* passed
+// LogEntry rvalue is created.
+//  LogEntry ctor perfect forwards function param logmsg.
+//  Ctor is templated on const char *
+//  const char * logmsg forwarded as rvalue
+//  member variable created from const char * constructor
+// LogEntry rvalue passed to try_push.
+//  try_push forwards LogEntry to push_impl
+//  push_impl uses move-assignment to place LogEntry rvalue in buffer
+//      move-assignment does element wise move-assignment
+//      i.e. string is moved into buffer
+// LogEntry rvalue destroyed (BAD)
+//
+// In both cases an extra temporary (LogEntry) is created and destroyed
+//
+// Potential Solution: Facilitate copying data directly into reserved string mem
+//  Add API to ringbuffer that takes variable no of template params
+//  If possible, construct buffer entry using these params
+//  This will allow for creating ringbuffer entry from const char* directly
+//  To do this in log string overload, use log_msg.c_str()
+//
+// Both cases the string is moved into buffer
+//  Move simply involves swapping internal pointers
+//  Ringbuffer entry holds std::string that holds internal pointer to arbitrary
+//  memory location
+//  We are not using buffer preallocated memory
+// This will cause Flush API to be slower (FINE)
+//
+// TODO:
+//  NO SSO: small string optimization used to avoid memory alloc. buffer is
+//  pre-allocated so sso useless
+//  Copy to buffer: Final operation of log is a copy to the pre-alloc buffer
 
 // store logmsg as std::string for short-string-optimization (SSO)
 struct LogEntry {
