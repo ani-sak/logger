@@ -2,145 +2,65 @@
 #include "fmt/base.h"
 #include "fmt/color.h"
 #include "fmt/os.h"
-#include "ringbuffer.hpp"
 
-#include <atomic>
 #include <cstddef>
 #include <map>
 #include <memory>
 #include <mutex>
-#include <string>
 #include <string_view>
 #include <utility>
 
+// Memory is preallocated, do not benefit from small string optimization (which
+// reduces expensive allocations)
+//
+// Favored char* over std::string for easier control over preallocating memory
+// and writing to preallocated memory
+//
+// Log is not currently threadsafe. This is to avoid overhead of mutex locking.
+// It is up to clients creating multi-threaded programs to tradeoff/optimize
+// overheads of mutex locking and call the library in a theadsafe manner.
 namespace AsyncLogger {
-// The goal is to minimize unnecessary operations when creating buffer entry
-// from log function.
-// Need to prepend loglevel info.
-//
-// Approach 1: Ringbuffer of std::string type
-//  Here the loglevel info is stored into a string.
-//  Need to create string temporary, convert loglevel to string
-//
-// Approach 2: Ringbuffer of LogEntry type (see analysis below)
-//
-// Both approaches need creation of a temporary.
-//
-// Approach 2
-// Log overload taking std::string logmsg will bind passed param (lvalue or
-// std::string rvalue) to fxn param (std::string const-ref lvalue).
-// LogEntry rvalue is created.
-//  LogEntry ctor perfect forwards function param logmsg.
-//  Note logmsg is lvalue so it is always copied to LogEntry rvalue. (BAD)
-//  We want string rvalues to be moved (TODO)
-// LogEntry rvalue passed to try_push.
-//  try_push forwards LogEntry to push_impl
-//  push_impl uses move-assignment to place LogEntry rvalue in buffer
-//      move-assignment does element wise move-assignment
-//      i.e. string is moved into buffer
-// LogEntry rvalue destroyed (BAD)
-//
-// Log overload taking const char* logmsg only called when const char* passed
-// LogEntry rvalue is created.
-//  LogEntry ctor perfect forwards function param logmsg.
-//  Ctor is templated on const char *
-//  const char * logmsg forwarded as rvalue
-//  member variable created from const char * constructor
-// LogEntry rvalue passed to try_push.
-//  try_push forwards LogEntry to push_impl
-//  push_impl uses move-assignment to place LogEntry rvalue in buffer
-//      move-assignment does element wise move-assignment
-//      i.e. string is moved into buffer
-// LogEntry rvalue destroyed (BAD)
-//
-// In both cases an extra temporary (LogEntry) is created and destroyed
-//
-// Potential Solution: Facilitate copying data directly into reserved string mem
-//  Add API to ringbuffer that takes variable no of template params
-//  If possible, construct buffer entry using these params
-//  This will allow for creating ringbuffer entry from const char* directly
-//  To do this in log string overload, use log_msg.c_str()
-//
-// Both cases the string is moved into buffer
-//  Move simply involves swapping internal pointers
-//  Ringbuffer entry holds std::string that holds internal pointer to arbitrary
-//  memory location
-//  We are not using buffer preallocated memory
-// This will cause Flush API to be slower (FINE)
-//
-// TODO:
-//  NO SSO: small string optimization used to avoid memory alloc. buffer is
-//  pre-allocated so sso useless
-//  Copy to buffer: Final operation of log is a copy to the pre-alloc buffer
 
-// store logmsg as std::string for short-string-optimization (SSO)
-//
-// No SSO, Log Entry has char* with capacity
-// Alloc full char buffer in Buffer class
-// Each log entry is a pointer to section in buffer i.e.
-//  Buffer has ringbuffer of pointers pointing to full char buffer
-//  Note Buffer knows full size, per entry size so can handle that
-//  log() is simply copying to current ringbuffer head correctly
-//      warn if log msg longer than size
-//
-
-struct LogEntry {
-    LogLevel log_level;
-    std::string log_msg;
-
-    LogEntry() = default;
-
-    template <typename T>
-    LogEntry(LogLevel log_level, T&& log_msg)
-        : log_level{log_level}, log_msg{std::forward<T>(log_msg)} {}
-
-    // Implicitly declared+defined move ctor, move-assignment operator
-    // Perform member-wise moves, move-assignment on rvalues
-    LogEntry(LogEntry&&) = default;
-    auto operator=(LogEntry&&) -> LogEntry& = default;
-
-    LogEntry(const LogEntry&) = default;
-    auto operator=(const LogEntry&) -> LogEntry& = default;
-    ~LogEntry() = default;
-};
-
-using RB = Ringbuffer::RingBuffer<LogEntry>;
-
+// Struct of Arrays (SOA) vs Array of Structs (AOS)
+// SOA showed better performance with brief profiling and was chosen
 struct Buffer {
 public:
     Buffer(std::size_t element_num, std::size_t element_size)
-        : element_num{element_num}, element_capacity{element_size},
-          buffer_size{element_num * element_size},
-          buffer_msg{new char[buffer_size]},
-          buffer_lvl{new LogLevel[element_num]},
-          buffer_msg_size{new std::size_t[element_num]} {}
+        : item_count{element_num}, item_size{element_size},
+          buffer_size_bytes{element_num * element_size},
+          buffer_logmsg{new char[buffer_size_bytes]},
+          buffer_loglvl{new LogLevel[element_num]},
+          buffer_logmsg_size{new std::size_t[element_num]} {}
 
-    std::size_t element_num;
-    std::size_t element_capacity;
+    const std::size_t item_count;
+    const std::size_t item_size;
 
-    const std::size_t buffer_size;
-    std::atomic<std::size_t> tail = 0;
-    std::atomic<std::size_t> head = 0;
-    std::atomic<std::size_t> num_entries = 0;
+    std::size_t item_idx_tail = 0;
+    std::size_t item_idx_head = 0;
+    std::size_t item_idx_valid_count = 0;
 
-    char* buffer_msg;
-    LogLevel* buffer_lvl;
-    std::size_t* buffer_msg_size;
+    const std::size_t buffer_size_bytes;
+    char* buffer_logmsg;
+    LogLevel* buffer_loglvl;
+    std::size_t* buffer_logmsg_size;
 
     template <typename T>
     auto push(LogLevel log_level, T&& msg) -> bool {
-        if (num_entries >= element_num) {
+        if (item_idx_valid_count >= item_count) {
             return false;
         }
 
-        buffer_lvl[tail] = log_level;
+        buffer_loglvl[item_idx_tail] = log_level;
 
+        // Unnecessary when T is a std::string lvalue/rvalue as
+        // std::string has copy() method
         std::string_view tmp{std::forward<T>(msg)};
-        buffer_msg_size[tail] =
-            tmp.copy(buffer_msg + (tail * element_capacity), element_capacity);
 
-        tail = (tail + 1) % element_num;
-        num_entries++;
+        buffer_logmsg_size[item_idx_tail] =
+            tmp.copy(buffer_logmsg + (item_idx_tail * item_size), item_size);
+
+        item_idx_tail = (item_idx_tail + 1) % item_count;
+        item_idx_valid_count++;
 
         return true;
     }
@@ -151,18 +71,23 @@ public:
         std::string_view msg;
     };
 
+    // pop() only returns one log element at a time and therefore needs to be
+    // called repeatedly to flush buffer
+    //
+    // This can be optimized, however flush is not a performance sensitive
+    // operation
     auto pop() -> LogElement {
-        if (num_entries <= 0) {
+        if (item_idx_valid_count <= 0) {
             return {};
         }
 
-        std::size_t old_head = head;
-        head = (head + 1) % element_num;
-        num_entries--;
+        std::size_t old_head = item_idx_head;
+        item_idx_head = (item_idx_head + 1) % item_count;
+        item_idx_valid_count--;
         return {true,
-                buffer_lvl[old_head],
-                {buffer_msg + (old_head * element_capacity),
-                 buffer_msg_size[old_head]}};
+                buffer_loglvl[old_head],
+                {buffer_logmsg + (old_head * item_size),
+                 buffer_logmsg_size[old_head]}};
     }
 };
 
@@ -193,9 +118,6 @@ auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel, const char* logmsg)
     if (log_level_program < loglevel) {
         return false;
     }
-
-    // // Pass LogEntry rvalue, which is "perfect forwarded" in try_push call
-    // return buffer->ringbuffer.try_push(LogEntry{loglevel, logmsg});
 
     return buffer->push(loglevel, logmsg);
 }
@@ -269,5 +191,4 @@ auto flush(std::shared_ptr<Buffer> buffer, const std::string& logfile) -> bool {
 
     return true;
 }
-
 } // namespace AsyncLogger

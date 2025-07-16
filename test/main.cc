@@ -30,7 +30,7 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
     const char* term_output_file = "test_terminal.txt";
 
     constexpr std::size_t buffer_size = 100;
-    // Terminal logging APIs redirected to term_output_file.
+    // Terminal logging APIs redirected to term_output_file for verification.
     {
 
         if (std::freopen(term_output_file, "w", stdout) == nullptr) {
