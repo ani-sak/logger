@@ -72,6 +72,16 @@ namespace AsyncLogger {
 //  Copy to buffer: Final operation of log is a copy to the pre-alloc buffer
 
 // store logmsg as std::string for short-string-optimization (SSO)
+//
+// No SSO, Log Entry has char* with capacity
+// Alloc full char buffer in Buffer class
+// Each log entry is a pointer to section in buffer i.e.
+//  Buffer has ringbuffer of pointers pointing to full char buffer
+//  Note Buffer knows full size, per entry size so can handle that
+//  log() is simply copying to current ringbuffer head correctly
+//      warn if log msg longer than size
+//
+
 struct LogEntry {
     LogLevel log_level;
     std::string log_msg;
@@ -164,7 +174,7 @@ auto flush(std::shared_ptr<Buffer> buffer) -> bool {
             break;
         }
 
-        fmt::print(fmt::format(style, "{} \n", log_entry.log_msg));
+        fmt::print(fmt::format(style, "{}\n", log_entry.log_msg));
 
         res = buffer->ringbuffer.try_pop();
     }
