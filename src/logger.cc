@@ -4,11 +4,13 @@
 #include "fmt/os.h"
 #include "ringbuffer.hpp"
 
+#include <atomic>
 #include <cstddef>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace AsyncLogger {
@@ -106,14 +108,62 @@ using RB = Ringbuffer::RingBuffer<LogEntry>;
 
 struct Buffer {
 public:
-    Buffer(std::size_t buffer_size, std::size_t entry_size)
-        : ringbuffer{buffer_size} {
-        ringbuffer.map([entry_size](LogEntry log_entry) {
-            log_entry.log_msg.reserve(entry_size);
-        });
+    Buffer(std::size_t element_num, std::size_t element_size)
+        : element_num{element_num}, element_capacity{element_size},
+          buffer_size{element_num * element_size},
+          buffer_msg{new char[buffer_size]},
+          buffer_lvl{new LogLevel[element_num]},
+          buffer_msg_size{new std::size_t[element_num]} {}
+
+    std::size_t element_num;
+    std::size_t element_capacity;
+
+    const std::size_t buffer_size;
+    std::atomic<std::size_t> tail = 0;
+    std::atomic<std::size_t> head = 0;
+    std::atomic<std::size_t> num_entries = 0;
+
+    char* buffer_msg;
+    LogLevel* buffer_lvl;
+    std::size_t* buffer_msg_size;
+
+    template <typename T>
+    auto push(LogLevel log_level, T&& msg) -> bool {
+        if (num_entries >= element_num) {
+            return false;
+        }
+
+        buffer_lvl[tail] = log_level;
+
+        std::string_view tmp{std::forward<T>(msg)};
+        buffer_msg_size[tail] =
+            tmp.copy(buffer_msg + (tail * element_capacity), element_capacity);
+
+        tail = (tail + 1) % element_num;
+        num_entries++;
+
+        return true;
     }
 
-    RB ringbuffer;
+    struct LogElement {
+        bool valid = false;
+        LogLevel lvl;
+        std::string_view msg;
+    };
+
+    auto pop() -> LogElement {
+        if (num_entries <= 0) {
+            return {};
+        }
+
+        std::size_t old_head = head;
+        head = (head + 1) % element_num;
+        num_entries--;
+        return {true,
+                buffer_lvl[old_head],
+                {buffer_msg + (old_head * element_capacity),
+                 buffer_msg_size[old_head]}};
+    }
 };
 
 auto create_buffer(std::size_t buffer_size, std::size_t entry_size)
@@ -135,8 +185,7 @@ auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel,
         return false;
     }
 
-    // Pass LogEntry rvalue, which is "perfect forwarded" in try_push call
-    return buffer->ringbuffer.try_push(LogEntry{loglevel, logmsg});
+    return buffer->push(loglevel, logmsg);
 }
 
 auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel, const char* logmsg)
@@ -145,8 +194,10 @@ auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel, const char* logmsg)
         return false;
     }
 
-    // Pass LogEntry rvalue, which is "perfect forwarded" in try_push call
-    return buffer->ringbuffer.try_push(LogEntry{loglevel, logmsg});
+    // // Pass LogEntry rvalue, which is "perfect forwarded" in try_push call
+    // return buffer->ringbuffer.try_push(LogEntry{loglevel, logmsg});
+
+    return buffer->push(loglevel, logmsg);
 }
 
 namespace {
@@ -156,13 +207,11 @@ std::mutex stdout_mtx;
 auto flush(std::shared_ptr<Buffer> buffer) -> bool {
     std::lock_guard<std::mutex> lock{stdout_mtx};
 
-    RB::Result res = buffer->ringbuffer.try_pop();
+    auto res = buffer->pop();
 
-    while (!res.err()) {
-        LogEntry log_entry{res.data()};
-
+    while (res.valid) {
         fmt::text_style style;
-        switch (log_entry.log_level) {
+        switch (res.lvl) {
         case LogLevel::Debug:
             style = {};
             break;
@@ -174,9 +223,9 @@ auto flush(std::shared_ptr<Buffer> buffer) -> bool {
             break;
         }
 
-        fmt::print(fmt::format(style, "{}\n", log_entry.log_msg));
+        fmt::print(fmt::format(style, "{}\n", res.msg));
 
-        res = buffer->ringbuffer.try_pop();
+        res = buffer->pop();
     }
 
     return true;
@@ -197,13 +246,11 @@ auto flush(std::shared_ptr<Buffer> buffer, const std::string& logfile) -> bool {
 
     fmt::ostream ofs{fmt::output_file(logfile)};
 
-    RB::Result res = buffer->ringbuffer.try_pop();
+    auto res = buffer->pop();
 
-    while (!res.err()) {
-        LogEntry log_entry{res.data()};
-
-        std::string log_prefix;
-        switch (log_entry.log_level) {
+    while (res.valid) {
+        std::string_view log_prefix;
+        switch (res.lvl) {
         case LogLevel::Debug:
             log_prefix = "Debug";
             break;
@@ -215,9 +262,9 @@ auto flush(std::shared_ptr<Buffer> buffer, const std::string& logfile) -> bool {
             break;
         }
 
-        ofs.print("{}: {} \n", log_prefix, log_entry.log_msg);
+        ofs.print("{}: {} \n", log_prefix, res.msg);
 
-        res = buffer->ringbuffer.try_pop();
+        res = buffer->pop();
     }
 
     return true;
