@@ -38,19 +38,19 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
         if (std::freopen(term_output_file, "w", stdout) == nullptr) {
             return 1;
         }
+
         auto term_output_close_defer = defer([]() { std::fclose(stdout); });
 
-        auto buf_term = Logger::create_buffer(
-            buffer_size, Logger::default_entry_size);
+        auto buf_term =
+            Logger::create_buffer(buffer_size, Logger::default_entry_size);
 
         // Test all basic log string types are supported
         std::string str_lvalue{"string lvalue"};
         Logger::log(buf_term, Logger::LogLevel::Debug, str_lvalue);
 
         Logger::log(buf_term, Logger::LogLevel::Debug,
-                         std::string{"string rvalue"});
-        Logger::log(buf_term, Logger::LogLevel::Debug,
-                         "const char pointer");
+                    std::string{"string rvalue"});
+        Logger::log(buf_term, Logger::LogLevel::Debug, "const char pointer");
 
         std::string_view str_view = "string view";
         Logger::log(buf_term, Logger::LogLevel::Debug, str_view);
@@ -59,23 +59,21 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
 
         // Check that buffered logs are successfully written in order.
         for (std::size_t idx = 0; idx < buffer_size; ++idx) {
-            Logger::log(buf_term, Logger::LogLevel::Debug,
-                             std::to_string(idx));
+            Logger::log(buf_term, Logger::LogLevel::Debug, std::to_string(idx));
         }
 
         Logger::flush(buf_term);
 
         // Verify buffer not overwritten
         for (std::size_t idx = 0; idx < buffer_size * 10; ++idx) {
-            Logger::log(buf_term, Logger::LogLevel::Debug,
-                             std::to_string(idx));
+            Logger::log(buf_term, Logger::LogLevel::Debug, std::to_string(idx));
         }
 
         Logger::flush(buf_term);
 
         // Verify correct ANSI codes to color error/warn logs
         std::string debug_yellow_msg = "Warn Yellow";
-        const char * error_red_msg = "Error Red";
+        const char* error_red_msg = "Error Red";
         Logger::log(buf_term, Logger::LogLevel::Warn, debug_yellow_msg);
         Logger::log(buf_term, Logger::LogLevel::Error, error_red_msg);
         Logger::flush(buf_term);
@@ -83,9 +81,8 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
         // Verify setting log level is adhered to
         {
             Logger::set_log_level(Logger::LogLevel::Warn);
-            auto log_level_reset_defer = defer([]() {
-                Logger::set_log_level(Logger::LogLevel::Debug);
-            });
+            auto log_level_reset_defer =
+                defer([]() { Logger::set_log_level(Logger::LogLevel::Debug); });
 
             Logger::log(buf_term, Logger::LogLevel::Debug, "NO SHOW");
             Logger::log(buf_term, Logger::LogLevel::Warn, "SHOW");
@@ -93,9 +90,8 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
         }
         {
             Logger::set_log_level(Logger::LogLevel::Error);
-            auto log_level_reset_defer = defer([]() {
-                Logger::set_log_level(Logger::LogLevel::Debug);
-            });
+            auto log_level_reset_defer =
+                defer([]() { Logger::set_log_level(Logger::LogLevel::Debug); });
 
             Logger::log(buf_term, Logger::LogLevel::Debug, "NO SHOW");
             Logger::log(buf_term, Logger::LogLevel::Warn, "NO SHOW");
@@ -131,8 +127,10 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
         // Verify flush is threadsafe
     }
 
-    // Verify file has correct entries.
-    freopen("/dev/tty", "w", stdout); // reset stdout back to the terminal
+    // reset stdout back to the terminal
+    if (std::freopen("/dev/tty", "w", stdout) == nullptr) {
+        return 1;
+    }
 
     std::ifstream ifs(term_output_file);
     if (!ifs) {
