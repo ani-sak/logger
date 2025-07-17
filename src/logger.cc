@@ -1,11 +1,11 @@
-#include "async_logger/logger.hpp"
+#include "logger/logger.hpp"
+
 #include "fmt/base.h"
 #include "fmt/color.h"
 #include "fmt/os.h"
 
 #include <cstddef>
 #include <map>
-#include <memory>
 #include <mutex>
 #include <string_view>
 #include <utility>

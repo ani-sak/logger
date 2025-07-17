@@ -1,5 +1,5 @@
-#ifndef ASYNC_LOGGER_LOGGER_HPP
-#define ASYNC_LOGGER_LOGGER_HPP
+#ifndef LOGGER_LOGGER_HPP
+#define LOGGER_LOGGER_HPP
 
 #include <cstddef>
 #include <memory>
@@ -30,4 +30,4 @@ auto flush(std::shared_ptr<Buffer> buffer) -> bool; // Flush to terminal
 auto flush(std::shared_ptr<Buffer> buffer, const std::string& logfile) -> bool;
 } // namespace AsyncLogger
 
-#endif // !ASYNC_LOGGER_LOGGER_HPP
+#endif // !LOGGER_LOGGER_HPP

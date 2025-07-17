@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.24)
-project(AsyncLogger VERSION 0.1.0)
+project(Logger VERSION 0.1.0)
 
-add_library(async_logger STATIC)
+add_library(logger STATIC)
 
-target_sources(async_logger
+target_sources(logger
 	PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/src/logger.cc
 )
 
-target_include_directories(async_logger
+target_include_directories(logger
 	PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src
 	PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include
 )
@@ -17,13 +17,13 @@ target_include_directories(async_logger
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt)
 find_package(Threads REQUIRED)
 
-target_link_libraries(async_logger
+target_link_libraries(logger
 	PRIVATE
 	fmt::fmt
 	Threads::Threads
 )
 
-target_compile_features(async_logger
+target_compile_features(logger
 	PRIVATE
 	cxx_std_17
 )
@@ -32,16 +32,16 @@ option(LOGGER_BUILD_TESTS "Build tests")
 if (${LOGGER_BUILD_TESTS})
 	message(STATUS "Building logger tests")
 
-	add_executable(async_logger_test)
+	add_executable(logger_test)
 
-	target_sources(async_logger_test
+	target_sources(logger_test
 		PRIVATE
 		${CMAKE_CURRENT_LIST_DIR}/test/main.cc
 	)
 
-	target_link_libraries(async_logger_test
+	target_link_libraries(logger_test
 		PRIVATE 
-		async_logger 
+		logger 
 		fmt::fmt
 	)
 endif()
