@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <string_view>
 
 namespace AsyncLogger {
 
@@ -25,9 +26,12 @@ auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel,
          const std::string& logmsg) -> bool;
 auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel, const char* logmsg)
     -> bool;
+auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel,
+         std::string_view logmsg) -> bool;
 
 auto flush(std::shared_ptr<Buffer> buffer) -> bool; // Flush to terminal
 auto flush(std::shared_ptr<Buffer> buffer, const std::string& logfile) -> bool;
+
 } // namespace AsyncLogger
 
 #endif // !LOGGER_LOGGER_HPP

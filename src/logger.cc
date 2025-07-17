@@ -122,6 +122,15 @@ auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel, const char* logmsg)
     return buffer->push(loglevel, logmsg);
 }
 
+auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel,
+         std::string_view logmsg) -> bool {
+    if (log_level_program < loglevel) {
+        return false;
+    }
+
+    return buffer->push(loglevel, logmsg);
+}
+
 namespace {
 std::mutex stdout_mtx;
 }
