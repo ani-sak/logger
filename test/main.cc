@@ -3,6 +3,7 @@
 #include "fmt/base.h"
 #include "fmt/color.h"
 
+#include <cstddef>
 #include <fstream>
 #include <string>
 #include <string_view>
@@ -50,6 +51,9 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
                          std::string{"string rvalue"});
         AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Debug,
                          "const char pointer");
+
+        std::string_view str_view = "string view";
+        AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Debug, str_view);
 
         AsyncLogger::flush(buf_term);
 
@@ -141,44 +145,64 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
     std::string line;
 
     std::size_t type_count = 0;
-    while (type_count < 3 && std::getline(ifs, line)) {
+    constexpr std::size_t basic_tests_num = 4;
+    while (type_count < basic_tests_num && std::getline(ifs, line)) {
         switch (type_count) {
         case 0: {
             if (line != "string lvalue") {
-                fmt::print(
-                    fmt::format(error_style, "Basic test [1/3] failed \n"));
+                fmt::print(fmt::format(error_style,
+                                       "Basic test [{}/{}] failed \n",
+                                       type_count + 1, basic_tests_num));
                 return 1;
             }
 
-            fmt::print(
-                fmt::format(success_style, "Basic test [1/3] passed \n"));
+            fmt::print(fmt::format(success_style,
+                                   "Basic test [{}/{}] passed \n",
+                                   type_count + 1, basic_tests_num));
             break;
         }
         case 1: {
             if (line != "string rvalue") {
-                fmt::print(
-                    fmt::format(error_style, "Basic test [2/3] failed \n"));
+                fmt::print(fmt::format(error_style,
+                                       "Basic test [{}/{}] failed \n",
+                                       type_count + 1, basic_tests_num));
                 return 1;
             }
 
-            fmt::print(
-                fmt::format(success_style, "Basic test [2/3] passed \n"));
+            fmt::print(fmt::format(success_style,
+                                   "Basic test [{}/{}] passed \n",
+                                   type_count + 1, basic_tests_num));
             break;
         }
         case 2: {
             if (line != "const char pointer") {
-                fmt::print(
-                    fmt::format(error_style, "Basic test [3/3] failed \n"));
+                fmt::print(fmt::format(error_style,
+                                       "Basic test [{}/{}] failed \n",
+                                       type_count + 1, basic_tests_num));
                 return 1;
             }
 
-            fmt::print(
-                fmt::format(success_style, "Basic test [3/3] passed \n"));
+            fmt::print(fmt::format(success_style,
+                                   "Basic test [{}/{}] passed \n",
+                                   type_count + 1, basic_tests_num));
+            break;
+        }
+        case 3: {
+            if (line != "string view") {
+                fmt::print(fmt::format(error_style,
+                                       "Basic test [{}/{}] failed \n",
+                                       type_count + 1, basic_tests_num));
+                return 1;
+            }
+
+            fmt::print(fmt::format(success_style,
+                                   "Basic test [{}/{}] passed \n",
+                                   type_count + 1, basic_tests_num));
             break;
         }
         default: {
             fmt::print(error_style, "Basic test entry {} missing \n",
-                       type_count);
+                       type_count + 1, basic_tests_num, type_count);
             break;
         }
         }
@@ -255,7 +279,7 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
         if (line != ver) {
             fmt::print(error_style,
                        "Set log level WARN adhered test [{}/{}] failed \n",
-                       (count+1), set_log_level_warn_test_entries);
+                       (count + 1), set_log_level_warn_test_entries);
             return 1;
         }
         ++count;
