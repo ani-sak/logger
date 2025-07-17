@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.24)
 project(Logger VERSION 0.2.1)
 
+# Logger Target
 add_library(logger STATIC)
+add_library(logger::logger ALIAS logger)
 
 target_sources(logger
 	PRIVATE
@@ -13,7 +15,12 @@ target_include_directories(logger
 	PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
-# [LIBRARIES]
+target_compile_features(logger
+	PRIVATE
+	cxx_std_17
+)
+
+# External Libraries
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt)
 find_package(Threads REQUIRED)
 
@@ -23,11 +30,7 @@ target_link_libraries(logger
 	Threads::Threads
 )
 
-target_compile_features(logger
-	PRIVATE
-	cxx_std_17
-)
-
+# Tests
 option(LOGGER_BUILD_TESTS "Build tests")
 if (${LOGGER_BUILD_TESTS})
 	message(STATUS "Building logger tests")
@@ -41,7 +44,7 @@ if (${LOGGER_BUILD_TESTS})
 
 	target_link_libraries(logger_test
 		PRIVATE 
-		logger 
+		logger::logger
 		fmt::fmt
 	)
 endif()
