@@ -19,7 +19,7 @@
 // Log is not currently threadsafe. This is to avoid overhead of mutex locking.
 // It is up to clients creating multi-threaded programs to tradeoff/optimize
 // overheads of mutex locking and call the library in a theadsafe manner.
-namespace AsyncLogger {
+namespace Logger {
 
 // Struct of Arrays (SOA) vs Array of Structs (AOS)
 // SOA showed better performance with brief profiling and was chosen
@@ -200,4 +200,4 @@ auto flush(std::shared_ptr<Buffer> buffer, const std::string& logfile) -> bool {
 
     return true;
 }
-} // namespace AsyncLogger
+} // namespace Logger

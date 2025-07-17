@@ -1,12 +1,11 @@
 #ifndef LOGGER_LOGGER_HPP
 #define LOGGER_LOGGER_HPP
 
-#include <cstddef>
 #include <memory>
 #include <string>
 #include <string_view>
 
-namespace AsyncLogger {
+namespace Logger {
 
 constexpr std::size_t default_buffer_size = 64;
 constexpr std::size_t default_entry_size = 1024;
@@ -32,6 +31,6 @@ auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel,
 auto flush(std::shared_ptr<Buffer> buffer) -> bool; // Flush to terminal
 auto flush(std::shared_ptr<Buffer> buffer, const std::string& logfile) -> bool;
 
-} // namespace AsyncLogger
+} // namespace Logger
 
 #endif // !LOGGER_LOGGER_HPP

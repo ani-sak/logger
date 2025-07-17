@@ -40,69 +40,69 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
         }
         auto term_output_close_defer = defer([]() { std::fclose(stdout); });
 
-        auto buf_term = AsyncLogger::create_buffer(
-            buffer_size, AsyncLogger::default_entry_size);
+        auto buf_term = Logger::create_buffer(
+            buffer_size, Logger::default_entry_size);
 
         // Test all basic log string types are supported
         std::string str_lvalue{"string lvalue"};
-        AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Debug, str_lvalue);
+        Logger::log(buf_term, Logger::LogLevel::Debug, str_lvalue);
 
-        AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Debug,
+        Logger::log(buf_term, Logger::LogLevel::Debug,
                          std::string{"string rvalue"});
-        AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Debug,
+        Logger::log(buf_term, Logger::LogLevel::Debug,
                          "const char pointer");
 
         std::string_view str_view = "string view";
-        AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Debug, str_view);
+        Logger::log(buf_term, Logger::LogLevel::Debug, str_view);
 
-        AsyncLogger::flush(buf_term);
+        Logger::flush(buf_term);
 
         // Check that buffered logs are successfully written in order.
         for (std::size_t idx = 0; idx < buffer_size; ++idx) {
-            AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Debug,
+            Logger::log(buf_term, Logger::LogLevel::Debug,
                              std::to_string(idx));
         }
 
-        AsyncLogger::flush(buf_term);
+        Logger::flush(buf_term);
 
         // Verify buffer not overwritten
         for (std::size_t idx = 0; idx < buffer_size * 10; ++idx) {
-            AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Debug,
+            Logger::log(buf_term, Logger::LogLevel::Debug,
                              std::to_string(idx));
         }
 
-        AsyncLogger::flush(buf_term);
+        Logger::flush(buf_term);
 
         // Verify correct ANSI codes to color error/warn logs
         std::string debug_yellow_msg = "Warn Yellow";
         const char * error_red_msg = "Error Red";
-        AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Warn, debug_yellow_msg);
-        AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Error, error_red_msg);
-        AsyncLogger::flush(buf_term);
+        Logger::log(buf_term, Logger::LogLevel::Warn, debug_yellow_msg);
+        Logger::log(buf_term, Logger::LogLevel::Error, error_red_msg);
+        Logger::flush(buf_term);
 
         // Verify setting log level is adhered to
         {
-            AsyncLogger::set_log_level(AsyncLogger::LogLevel::Warn);
+            Logger::set_log_level(Logger::LogLevel::Warn);
             auto log_level_reset_defer = defer([]() {
-                AsyncLogger::set_log_level(AsyncLogger::LogLevel::Debug);
+                Logger::set_log_level(Logger::LogLevel::Debug);
             });
 
-            AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Debug, "NO SHOW");
-            AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Warn, "SHOW");
-            AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Error, "SHOW");
+            Logger::log(buf_term, Logger::LogLevel::Debug, "NO SHOW");
+            Logger::log(buf_term, Logger::LogLevel::Warn, "SHOW");
+            Logger::log(buf_term, Logger::LogLevel::Error, "SHOW");
         }
         {
-            AsyncLogger::set_log_level(AsyncLogger::LogLevel::Error);
+            Logger::set_log_level(Logger::LogLevel::Error);
             auto log_level_reset_defer = defer([]() {
-                AsyncLogger::set_log_level(AsyncLogger::LogLevel::Debug);
+                Logger::set_log_level(Logger::LogLevel::Debug);
             });
 
-            AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Debug, "NO SHOW");
-            AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Warn, "NO SHOW");
-            AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Error, "SHOW");
+            Logger::log(buf_term, Logger::LogLevel::Debug, "NO SHOW");
+            Logger::log(buf_term, Logger::LogLevel::Warn, "NO SHOW");
+            Logger::log(buf_term, Logger::LogLevel::Error, "SHOW");
         }
 
-        AsyncLogger::flush(buf_term);
+        Logger::flush(buf_term);
 
         // TODO
         // Verify log entry longer than buffer entry size clipped
@@ -121,7 +121,7 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
         //         for (std::size_t log_entry = 0; log_entry <
         //         thread_log_entries;
         //              ++log_entry) {
-        //             AsyncLogger::log(buf_term, AsyncLogger::LogLevel::Debug,
+        //             Logger::log(buf_term, Logger::LogLevel::Debug,
         //                              std::to_string(log_entry));
         //         }
         //     });
