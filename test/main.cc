@@ -33,6 +33,9 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
 
     constexpr std::size_t buffer_size = 100;
     // Terminal logging APIs redirected to term_output_file for verification.
+
+    std::string long_entry;
+
     {
 
         if (std::freopen(term_output_file, "w", stdout) == nullptr) {
@@ -71,6 +74,20 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
 
         Logger::flush(buf_term);
 
+        // Verify log entry longer than buffer entry size clipped
+        std::string long_entry_word = "entry";
+        for (std::size_t i = 0;
+             i <= (Logger::default_entry_size / long_entry_word.size()); ++i) {
+            long_entry += long_entry_word;
+        }
+        if (long_entry.size() < Logger::default_entry_size) {
+            fmt::print("Entry is smaller than logger entry size and does not "
+                       "test whether long entires are clipped");
+            return 1;
+        }
+        Logger::log(buf_term, Logger::LogLevel::Debug, long_entry);
+        Logger::flush(buf_term);
+
         // Verify correct ANSI codes to color error/warn logs
         std::string debug_yellow_msg = "Warn Yellow";
         const char* error_red_msg = "Error Red";
@@ -99,29 +116,6 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
         }
 
         Logger::flush(buf_term);
-
-        // TODO
-        // Verify log entry longer than buffer entry size clipped
-
-        // // Verify log is threadsafe
-        // constexpr std::size_t thread_num_total = 10;
-        // constexpr std::size_t thread_log_entries =
-        //     buffer_size / thread_num_total;
-        //
-        // std::vector<std::thread> log_thread_vector;
-        // log_thread_vector.reserve(thread_num_total);
-        //
-        // for (std::size_t thread_idx = 0; thread_idx < thread_num_total;
-        //      ++thread_idx) {
-        //     log_thread_vector.emplace_back([buf_term]() {
-        //         for (std::size_t log_entry = 0; log_entry <
-        //         thread_log_entries;
-        //              ++log_entry) {
-        //             Logger::log(buf_term, Logger::LogLevel::Debug,
-        //                              std::to_string(log_entry));
-        //         }
-        //     });
-        // }
 
         // TODO
         // Verify flush is threadsafe
@@ -230,6 +224,17 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
     }
     fmt::print(
         fmt::format(success_style, "Buffer does not overwrite test passed \n"));
+
+    // Buffer clips overly long entries
+    if (std::getline(ifs, line)) {
+        std::string_view ver{long_entry.c_str(), Logger::default_entry_size};
+        if (line != ver) {
+            fmt::print(error_style, "Clip long entries test failed \n");
+            return 1;
+        }
+        fmt::print(
+            fmt::format(success_style, "Clip long entries test passed \n"));
+    }
 
     std::string ansi_reset = "\033[0m";
     std::string ansi_rgb_prefix = "\033[38;2;";
