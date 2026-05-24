@@ -5,6 +5,7 @@
 #include "fmt/os.h"
 
 #include <cstddef> // std::size_t
+#include <cstdlib>
 #include <cstring> // std::memcpy
 
 // Support log API taking string and string_view
@@ -62,20 +63,48 @@ auto alloc(Buffer* buf, LogInfo log_info, void const* log) -> void {
     buf->idx += padding + sizeof(LogInfo) + info->log_size;
 }
 
-auto create_buffer(std::size_t buffer_size_bytes, std::size_t entry_size)
+auto create_buffer(std::size_t buffer_size_bytes)
     -> Buffer* {
-    Buffer* buffer = static_cast<Buffer*>(malloc(sizeof(Buffer)));
-    char* logbuf = static_cast<char*>(malloc(buffer_size_bytes * entry_size));
+    auto* buffer = static_cast<Buffer*>(malloc(sizeof(Buffer)));
+    char* logbuf = static_cast<char*>(malloc(buffer_size_bytes));
     if (buffer == nullptr || logbuf == nullptr) {
         return nullptr;
     }
 
     buffer->logbuf = logbuf;
-    buffer->logbuf_size_bytes = buffer_size_bytes * entry_size;
+    buffer->logbuf_size_bytes = buffer_size_bytes;
     buffer->idx = 0;
     buffer->user_alloc = false;
 
     return buffer;
+}
+
+auto create_buffer(void* buffer_user, std::size_t buffer_user_size_bytes)
+    -> Buffer* {
+    if (buffer_user == nullptr || buffer_user_size_bytes == 0) {
+        return nullptr;
+    }
+
+    // Assume that buffer_user is aligned!
+    auto* buffer = static_cast<Buffer*>(buffer_user);
+
+    char* base = static_cast<char*>(buffer_user);
+    buffer->logbuf = base + sizeof(Buffer);
+    buffer->logbuf_size_bytes = buffer_user_size_bytes - sizeof(Buffer);
+
+    buffer->idx = 0;
+    buffer->user_alloc = true;
+
+    return buffer;
+}
+
+auto free_buffer(Buffer* buffer) -> void {
+    if (buffer -> user_alloc) {
+        return;
+    }
+
+    free(buffer->logbuf);
+    free(buffer);
 }
 
 namespace {
