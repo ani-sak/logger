@@ -4,96 +4,78 @@
 #include "fmt/color.h"
 #include "fmt/os.h"
 
-#include <cstddef>
-#include <map>
-#include <mutex>
-#include <string_view>
-#include <utility>
+#include <cstddef> // std::size_t
+#include <cstring> // std::memcpy
 
-// Memory is preallocated, do not benefit from small string optimization (which
-// reduces expensive allocations)
+// Support log API taking string and string_view
+#include <string>
+#include <string_view>
+
+
+// Use preallocated ringbuffer, so no benefit of using small string
+// optimization. Small string optimization reduces no of (expensive)
+// allocations.
 //
-// Favored char* over std::string for easier control over preallocating memory
-// and writing to preallocated memory
-//
-// Log is not currently threadsafe. This is to avoid overhead of mutex locking.
-// It is up to clients creating multi-threaded programs to tradeoff/optimize
-// overheads of mutex locking and call the library in a theadsafe manner.
+// Log is not threadsafe. Thread safety is responsibility of library user.
+// This avoids overhead of mutex locking in single threaded situations, and
+// provides more control to library user.
+
 namespace Logger {
 
-// Struct of Arrays (SOA) vs Array of Structs (AOS)
-// SOA showed better performance with brief profiling and was chosen
-struct Buffer {
-public:
-    Buffer(std::size_t element_num, std::size_t element_size)
-        : item_count{element_num}, item_size{element_size},
-          buffer_size_bytes{element_num * element_size},
-          buffer_logmsg{new char[buffer_size_bytes]},
-          buffer_loglvl{new LogLevel[element_num]},
-          buffer_logmsg_size{new std::size_t[element_num]} {}
-
-    const std::size_t item_count;
-    const std::size_t item_size;
-
-    std::size_t item_idx_tail = 0;
-    std::size_t item_idx_head = 0;
-    std::size_t item_idx_valid_count = 0;
-
-    const std::size_t buffer_size_bytes;
-    char* buffer_logmsg;
-    LogLevel* buffer_loglvl;
-    std::size_t* buffer_logmsg_size;
-
-    template <typename T>
-    auto push(LogLevel log_level, T&& msg) -> bool {
-        if (item_idx_valid_count >= item_count) {
-            return false;
-        }
-
-        buffer_loglvl[item_idx_tail] = log_level;
-
-        // Unnecessary when T is a std::string lvalue/rvalue as
-        // std::string has copy() method
-        std::string_view tmp{std::forward<T>(msg)};
-
-        buffer_logmsg_size[item_idx_tail] =
-            tmp.copy(buffer_logmsg + (item_idx_tail * item_size), item_size);
-
-        item_idx_tail = (item_idx_tail + 1) % item_count;
-        item_idx_valid_count++;
-
-        return true;
-    }
-
-    struct LogElement {
-        bool valid = false;
-        LogLevel lvl;
-        std::string_view msg;
-    };
-
-    // pop() only returns one log element at a time and therefore needs to be
-    // called repeatedly to flush buffer
-    //
-    // This can be optimized, however flush is not a performance sensitive
-    // operation
-    auto pop() -> LogElement {
-        if (item_idx_valid_count <= 0) {
-            return {};
-        }
-
-        std::size_t old_head = item_idx_head;
-        item_idx_head = (item_idx_head + 1) % item_count;
-        item_idx_valid_count--;
-        return {true,
-                buffer_loglvl[old_head],
-                {buffer_logmsg + (old_head * item_size),
-                 buffer_logmsg_size[old_head]}};
-    }
+struct LogInfo {
+    std::size_t log_size;
+    LogLevel log_level;
 };
 
-auto create_buffer(std::size_t buffer_size, std::size_t entry_size)
-    -> std::shared_ptr<Buffer> {
-    return std::make_shared<Buffer>(buffer_size, entry_size);
+// logbuf is packed as follows:
+// [Loginfo, Log, Padding, LogInfo, Log, Padding ...]
+// LogInfo contains metadata of the log
+// Log is an array of chars of length specified in the previous LogInfo log_size
+// Padding to align next LogInfo
+struct Buffer {
+    char* logbuf = nullptr;
+    std::size_t logbuf_size_bytes = 0;
+    std::size_t idx = 0;
+    bool user_alloc = false;
+};
+
+auto verify_alloc(Buffer* buf, std::size_t log_size_bytes) -> bool {
+    std::size_t padding =
+        (alignof(LogInfo) - (buf->idx % alignof(LogInfo))) % alignof(LogInfo);
+    return buf->idx + padding + sizeof(LogInfo) + log_size_bytes <=
+           buf->logbuf_size_bytes;
+}
+
+auto alloc(Buffer* buf, LogInfo log_info, void const* log) -> void {
+    std::size_t padding =
+        (alignof(LogInfo) - (buf->idx % alignof(LogInfo))) % alignof(LogInfo);
+
+    char* base = buf->logbuf + buf->idx + padding;
+
+    auto* info = reinterpret_cast<LogInfo*>(base);
+    info->log_level = log_info.log_level;
+    info->log_size = log_info.log_size;
+
+    void* dest = static_cast<void*>(base + sizeof(LogInfo));
+    std::memcpy(dest, log, info->log_size);
+
+    buf->idx += padding + sizeof(LogInfo) + info->log_size;
+}
+
+auto create_buffer(std::size_t buffer_size_bytes, std::size_t entry_size)
+    -> Buffer* {
+    Buffer* buffer = static_cast<Buffer*>(malloc(sizeof(Buffer)));
+    char* logbuf = static_cast<char*>(malloc(buffer_size_bytes * entry_size));
+    if (buffer == nullptr || logbuf == nullptr) {
+        return nullptr;
+    }
+
+    buffer->logbuf = logbuf;
+    buffer->logbuf_size_bytes = buffer_size_bytes * entry_size;
+    buffer->idx = 0;
+    buffer->user_alloc = false;
+
+    return buffer;
 }
 
 namespace {
@@ -104,45 +86,71 @@ auto set_log_level(LogLevel log_level) -> void {
     log_level_program = log_level;
 }
 
-auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel,
+auto log(Buffer* buffer, LogLevel loglevel,
          const std::string& logmsg) -> bool {
-    if (log_level_program < loglevel) {
+    if (loglevel > log_level_program) {
+        return false;
+    }
+    if (!verify_alloc(buffer, logmsg.size())) {
         return false;
     }
 
-    return buffer->push(loglevel, logmsg);
+    LogInfo info;
+    info.log_level = loglevel;
+    info.log_size = logmsg.size();
+    alloc(buffer, info, logmsg.data());
+
+    return true;
 }
 
-auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel, const char* logmsg)
+auto log(Buffer* buffer, LogLevel loglevel, const char* logmsg_c)
     -> bool {
-    if (log_level_program < loglevel) {
+    if (loglevel > log_level_program) {
         return false;
     }
 
-    return buffer->push(loglevel, logmsg);
+    std::string logmsg(logmsg_c);
+
+    if (!verify_alloc(buffer, logmsg.size())) {
+        return false;
+    }
+
+    LogInfo info{};
+    info.log_level = loglevel;
+    info.log_size = logmsg.size();
+    alloc(buffer, info, logmsg.data());
+
+    return true;
 }
 
-auto log(std::shared_ptr<Buffer> buffer, LogLevel loglevel,
+auto log(Buffer* buffer, LogLevel loglevel,
          std::string_view logmsg) -> bool {
-    if (log_level_program < loglevel) {
+    if (loglevel > log_level_program) {
+        return false;
+    }
+    if (!verify_alloc(buffer, logmsg.size())) {
         return false;
     }
 
-    return buffer->push(loglevel, logmsg);
+    LogInfo info;
+    info.log_level = loglevel;
+    info.log_size = logmsg.size();
+    alloc(buffer, info, logmsg.data());
+
+    return true;
 }
 
-namespace {
-std::mutex stdout_mtx;
-}
+auto flush(Buffer* buf) -> bool {
+    int32_t idx = 0;
+    while (idx < buf->idx) {
+        std::size_t padding =
+            (alignof(LogInfo) - (idx % alignof(LogInfo))) % alignof(LogInfo);
 
-auto flush(std::shared_ptr<Buffer> buffer) -> bool {
-    std::lock_guard<std::mutex> lock{stdout_mtx};
+        char* base = buf->logbuf + idx + padding;
 
-    auto res = buffer->pop();
-
-    while (res.valid) {
+        auto* info = reinterpret_cast<LogInfo*>(base);
         fmt::text_style style;
-        switch (res.lvl) {
+        switch (info->log_level) {
         case LogLevel::Debug:
             style = {};
             break;
@@ -154,50 +162,15 @@ auto flush(std::shared_ptr<Buffer> buffer) -> bool {
             break;
         }
 
-        fmt::print(fmt::format(style, "{}\n", res.msg));
+        char* dest = (base + sizeof(LogInfo));
+        std::string_view log((dest), info->log_size);
+        fmt::print(fmt::format(style, "{}\n", log));
 
-        res = buffer->pop();
+        idx += padding + sizeof(LogInfo) + info->log_size;
     }
 
+    buf->idx = 0;
     return true;
 }
 
-namespace {
-std::mutex map_mutex{};
-
-auto get_logfile_mutex(const std::string& logfile) -> std::mutex& {
-    std::lock_guard<std::mutex> lock{map_mutex};
-    static std::map<std::string, std::mutex> logfile_mutex_map{};
-    return logfile_mutex_map[logfile];
-}
-} // namespace
-
-auto flush(std::shared_ptr<Buffer> buffer, const std::string& logfile) -> bool {
-    std::lock_guard<std::mutex> lock{get_logfile_mutex(logfile)};
-
-    fmt::ostream ofs{fmt::output_file(logfile)};
-
-    auto res = buffer->pop();
-
-    while (res.valid) {
-        std::string_view log_prefix;
-        switch (res.lvl) {
-        case LogLevel::Debug:
-            log_prefix = "Debug";
-            break;
-        case LogLevel::Warn:
-            log_prefix = "Warn";
-            break;
-        case LogLevel::Error:
-            log_prefix = "Error";
-            break;
-        }
-
-        ofs.print("{}: {} \n", log_prefix, res.msg);
-
-        res = buffer->pop();
-    }
-
-    return true;
-}
 } // namespace Logger

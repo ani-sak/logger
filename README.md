@@ -35,3 +35,7 @@ auto file_log = Logger::FileLogger("logfile.log");
 file_log->log(Logger::LogLevel::Error, "This error message is logged to a
 file");
 ```
+### TODO
+1) Add API allowing user to init library with their own memory by
+providing a pointer
+2) Remove submodule dependency on fmt.
