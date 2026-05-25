@@ -229,7 +229,7 @@ auto flush(Buffer* buf, const std::string& logfile) -> bool {
 
         char* dest = (base + sizeof(LogInfo));
         std::string_view log((dest), info->log_size);
-        outfile.print("{}:{} \n", prefix, log);
+        outfile.print("{}: {} \n", prefix, log);
 
         idx += padding + sizeof(LogInfo) + info->log_size;
     }

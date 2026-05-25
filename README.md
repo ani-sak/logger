@@ -32,7 +32,7 @@ Logger::log(logbuf, Logger::LogLevel::Error, "Error message"); // Colored red
 Logger::flush(logbuf); // Write above messages to terminal
 
 Logger::log(logbuf, Logger::LogLevel::Debug, "My log file");
-Logger::flush(logbuf, "log_file.txt"); // Write "My log file" to log_file.txt
+Logger::flush(logbuf, "log_file.txt"); // Write "Debug: My log file" to log_file.txt
 ```
 
 The program log level can be modified using `set_log_level`.
