@@ -17,7 +17,7 @@ target_include_directories(logger
 
 target_compile_features(logger
 	PRIVATE
-	cxx_std_17
+	cxx_std_11
 )
 
 # External Libraries
