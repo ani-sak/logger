@@ -202,4 +202,40 @@ auto flush(Buffer* buf) -> bool {
     return true;
 }
 
+auto flush(Buffer* buf, const std::string& logfile) -> bool {
+    auto outfile = fmt::output_file(logfile);
+
+    int32_t idx = 0;
+    while (idx < buf->idx) {
+        std::size_t padding =
+            (alignof(LogInfo) - (idx % alignof(LogInfo))) % alignof(LogInfo);
+
+        char* base = buf->logbuf + idx + padding;
+
+        auto* info = reinterpret_cast<LogInfo*>(base);
+
+        std::string prefix;
+        switch (info->log_level) {
+        case LogLevel::Debug:
+            prefix = "Debug";
+            break;
+        case LogLevel::Warn:
+            prefix = "WARN";
+            break;
+        case LogLevel::Error:
+            prefix = "ERROR";
+            break;
+        }
+
+        char* dest = (base + sizeof(LogInfo));
+        std::string_view log((dest), info->log_size);
+        outfile.print("{}:{} \n", prefix, log);
+
+        idx += padding + sizeof(LogInfo) + info->log_size;
+    }
+
+    buf->idx = 0;
+    return true;
+}
+
 } // namespace Logger
