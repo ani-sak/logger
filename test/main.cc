@@ -1,93 +1,414 @@
-#include "async_logger/logger.hpp"
+#include "logger/logger.hpp"
+
 #include "fmt/base.h"
-#include "fmt/chrono.h"
-#include "fmt/format.h"
+#include "fmt/color.h"
 
-#include <array>
-#include <chrono>
 #include <cstddef>
-#include <iterator>
-#include <memory>
+#include <cstdio>
+#include <cstdlib>
+#include <fstream>
 #include <string>
-#include <thread>
-
-namespace Test {
-
-void logger_test_helper(const std::shared_ptr<Logger::Logger>& logger,
-                        std::size_t log_rounds, std::size_t logs_per_round,
-                        Logger::LogLevel log_level = Logger::LogLevel::Warn) {
-    const auto start_time = std::chrono::high_resolution_clock::now();
-
-    for (std::size_t rnd = 0; rnd < log_rounds; rnd++) {
-        for (std::size_t logidx = 1; logidx <= logs_per_round; logidx++) {
-            logger->log(log_level,
-                        std::to_string((rnd * logs_per_round) + logidx));
-        }
-        auto time_now = std::chrono::system_clock::now();
-    }
-
-    const auto end_time = std::chrono::high_resolution_clock::now();
-
-    fmt::print("Logged {} entries in {} \n", log_rounds * logs_per_round,
-               (end_time - start_time));
-}
+#include <string_view>
 
 namespace {
-constexpr std::size_t buffer_size = 5;
-constexpr std::size_t logs_per_round = 30;
-constexpr std::size_t log_rounds = 3;
+template <typename F>
+class Defer {
+public:
+    Defer(F fxn) : fxn(fxn) {}
+    Defer(Defer&&) = delete;
+    Defer(const Defer&) = delete;
+    auto operator=(Defer&&) -> Defer& = delete;
+    auto operator=(const Defer&) -> Defer& = delete;
+    ~Defer() { fxn(); }
+
+    F fxn;
+};
+
+template <typename F>
+auto defer(F func) -> Defer<F> {
+    return Defer<F>{func};
+}
 } // namespace
 
-void test_console_logger(Logger::LogStrategy ls, Logger::LogLevel ll) {
-    auto cout_1 = Logger::ConsoleLogger(buffer_size, ls);
-    logger_test_helper(cout_1, log_rounds, logs_per_round, ll);
+namespace Tests {
+const fmt::text_style error_style = fmt::fg(fmt::color::red);
+const fmt::text_style success_style = fmt::fg(fmt::color::green);
+
+auto basic(bool user_alloc = false) -> bool {
+    const char* term_output_file = "test_basic.txt";
+    if (std::freopen(term_output_file, "w", stdout) == nullptr) {
+        return false;
+    }
+    auto term_output_close_defer = defer([]() { std::fclose(stdout); });
+
+    constexpr std::size_t buffer_size = 2048;
+    Logger::Buffer* buf_term = nullptr;
+    if (!user_alloc) {
+        buf_term = Logger::create_buffer(buffer_size);
+    } else {
+        void* buf_user = malloc(buffer_size);
+        buf_term = Logger::create_buffer(buf_user, buffer_size);
+    }
+
+    std::string str_lvalue{"string lvalue"};
+    Logger::log(buf_term, Logger::LogLevel::Debug, str_lvalue);
+
+    Logger::log(buf_term, Logger::LogLevel::Debug,
+                std::string{"string rvalue"});
+    Logger::log(buf_term, Logger::LogLevel::Debug, "const char pointer");
+
+    std::string_view str_view = "string view";
+    Logger::log(buf_term, Logger::LogLevel::Debug, str_view);
+
+    Logger::flush(buf_term);
+
+    // ---------------------------------------------------------------------
+    // reset stdout back to the terminal
+    if (std::freopen("/dev/tty", "w", stdout) == nullptr) {
+        return false;
+    }
+    std::ifstream ifs(term_output_file);
+    if (!ifs) {
+        return false;
+    }
+
+    std::string line;
+
+    std::size_t type_count = 0;
+    constexpr std::size_t basic_tests_num = 4;
+    while (type_count < basic_tests_num && std::getline(ifs, line)) {
+        switch (type_count) {
+        case 0: {
+            if (line != "string lvalue") {
+                fmt::print(fmt::format(error_style,
+                                       "Basic test [{}/{}] failed \n",
+                                       type_count + 1, basic_tests_num));
+                return false;
+            }
+
+            fmt::print(fmt::format(success_style,
+                                   "Basic test [{}/{}] passed \n",
+                                   type_count + 1, basic_tests_num));
+            break;
+        }
+        case 1: {
+            if (line != "string rvalue") {
+                fmt::print(fmt::format(error_style,
+                                       "Basic test [{}/{}] failed \n",
+                                       type_count + 1, basic_tests_num));
+                return false;
+            }
+
+            fmt::print(fmt::format(success_style,
+                                   "Basic test [{}/{}] passed \n",
+                                   type_count + 1, basic_tests_num));
+            break;
+        }
+        case 2: {
+            if (line != "const char pointer") {
+                fmt::print(fmt::format(error_style,
+                                       "Basic test [{}/{}] failed \n",
+                                       type_count + 1, basic_tests_num));
+                return false;
+            }
+
+            fmt::print(fmt::format(success_style,
+                                   "Basic test [{}/{}] passed \n",
+                                   type_count + 1, basic_tests_num));
+            break;
+        }
+        case 3: {
+            if (line != "string view") {
+                fmt::print(fmt::format(error_style,
+                                       "Basic test [{}/{}] failed \n",
+                                       type_count + 1, basic_tests_num));
+                return false;
+            }
+
+            fmt::print(fmt::format(success_style,
+                                   "Basic test [{}/{}] passed \n",
+                                   type_count + 1, basic_tests_num));
+            break;
+        }
+        default: {
+            fmt::print(error_style, "Basic test entry {} missing \n",
+                       type_count + 1, basic_tests_num, type_count);
+            break;
+        }
+        }
+
+        ++type_count;
+    }
+
+    return true;
 }
 
-void test_file_logger(Logger::LogStrategy ls, Logger::LogLevel ll) {
-    auto filelog_1 = Logger::FileLogger("testlog.log", buffer_size, ls);
-    logger_test_helper(filelog_1, log_rounds, logs_per_round, ll);
+auto inorder(bool user_alloc = false) -> bool {
+    const char* term_output_file = "test_inorder_overwrite.txt";
+    if (std::freopen(term_output_file, "w", stdout) == nullptr) {
+        return false;
+    }
+    auto term_output_close_defer = defer([]() { std::fclose(stdout); });
+
+    constexpr std::size_t buffer_size = 1 << 16;
+    Logger::Buffer* buf_term = nullptr;
+    if (!user_alloc) {
+        buf_term = Logger::create_buffer(buffer_size);
+    } else {
+        void* buf_user = malloc(buffer_size);
+        buf_term = Logger::create_buffer(buf_user, buffer_size);
+    }
+
+    // Check that buffered logs are successfully written in order.
+    std::size_t num_inorder_logs = 1024;
+    for (std::size_t idx = 0; idx < num_inorder_logs; ++idx) {
+        Logger::log(buf_term, Logger::LogLevel::Debug, std::to_string(idx));
+    }
+    Logger::flush(buf_term);
+
+    // Verify buffer not overwritten
+    for (std::size_t idx = 0; idx < buffer_size * 10; ++idx) {
+        Logger::log(buf_term, Logger::LogLevel::Debug, std::to_string(idx));
+    }
+    Logger::flush(buf_term);
+
+    // ---------------------------------------------------------------------
+    // reset stdout back to the terminal
+    if (std::freopen("/dev/tty", "w", stdout) == nullptr) {
+        return false;
+    }
+    std::ifstream ifs(term_output_file);
+    if (!ifs) {
+        return false;
+    }
+
+    std::string line;
+
+    std::size_t count = 0;
+    while (count < num_inorder_logs && std::getline(ifs, line)) {
+        if (line != std::to_string(count)) {
+            fmt::print(error_style, "Inorder test entry {} out of order \n",
+                       count);
+            return false;
+        }
+        ++count;
+    }
+    fmt::print(fmt::format(success_style, "Inorder test passed \n"));
+
+    count = 0;
+    while (count < buffer_size * 10 && std::getline(ifs, line)) {
+        if (line != std::to_string(count)) {
+            fmt::print(error_style, "Buffer does not overwrite test failed \n",
+                       count);
+            fmt::print(line);
+            return false;
+        }
+        ++count;
+    }
+
+    fmt::print(
+        fmt::format(success_style, "Buffer does not overwrite test passed \n"));
+    return true;
 }
 
-} // namespace Test
-
-auto get_level(std::size_t i) -> Logger::LogLevel {
-    switch (i % 3) {
-    case 0:
-        return Logger::LogLevel::Debug;
-    case 1:
-        return Logger::LogLevel::Warn;
-    case 2:
-        return Logger::LogLevel::Error;
-    default:
-        Logger::LogLevel::Error;
+auto log_level(bool user_alloc = false) -> bool {
+    const char* term_output_file = "test_log_level.txt";
+    if (std::freopen(term_output_file, "w", stdout) == nullptr) {
+        return false;
     }
+    auto term_output_close_defer = defer([]() { std::fclose(stdout); });
+
+    constexpr std::size_t buffer_size = 1 << 16;
+    Logger::Buffer* buf_term = nullptr;
+    if (!user_alloc) {
+        buf_term = Logger::create_buffer(buffer_size);
+    } else {
+        void* buf_user = malloc(buffer_size);
+        buf_term = Logger::create_buffer(buf_user, buffer_size);
+    }
+
+    // Verify setting log level is adhered to
+    {
+        Logger::set_log_level(Logger::LogLevel::Warn);
+
+        Logger::log(buf_term, Logger::LogLevel::Debug, "NO SHOW");
+        Logger::log(buf_term, Logger::LogLevel::Warn, "SHOW");
+        Logger::log(buf_term, Logger::LogLevel::Error, "SHOW");
+    }
+    {
+        Logger::set_log_level(Logger::LogLevel::Error);
+
+        Logger::log(buf_term, Logger::LogLevel::Debug, "NO SHOW");
+        Logger::log(buf_term, Logger::LogLevel::Warn, "NO SHOW");
+        Logger::log(buf_term, Logger::LogLevel::Error, "SHOW");
+    }
+    Logger::flush(buf_term);
+
+    // ---------------------------------------------------------------------
+    // reset stdout back to the terminal
+    if (std::freopen("/dev/tty", "w", stdout) == nullptr) {
+        return false;
+    }
+    std::ifstream ifs(term_output_file);
+    if (!ifs) {
+        return false;
+    }
+
+    constexpr std::size_t set_log_level_warn_test_entries = 2;
+    constexpr std::size_t set_log_level_error_test_entries = 1;
+
+    std::string ansi_reset = "\033[0m";
+    std::string ansi_rgb_prefix = "\033[38;2;";
+    std::string ansi_rgb_red = "255;000;000";
+    std::string ansi_rgb_yellow = "255;255;000";
+    std::string ansi_cmd_posfix = "m";
+
+    std::string show_msg = "SHOW";
+
+    std::size_t count = 0;
+    std::string line;
+    while (count < set_log_level_warn_test_entries && std::getline(ifs, line)) {
+        std::string ver =
+            ansi_rgb_prefix + ansi_rgb_yellow + ansi_cmd_posfix + show_msg;
+        if (count >= 1) {
+            ver = ansi_reset + ansi_rgb_prefix + ansi_rgb_red +
+                  ansi_cmd_posfix + show_msg;
+        }
+        if (line != ver) {
+            fmt::print(error_style,
+                       "Set log level WARN adhered test [{}/{}] failed \n",
+                       (count + 1), set_log_level_warn_test_entries);
+            return false;
+        }
+        ++count;
+    }
+    fmt::print(fmt::format(success_style,
+                           "Set log level WARN adhered test passed \n"));
+
+    count = 0;
+    while (count < set_log_level_error_test_entries &&
+           std::getline(ifs, line)) {
+        std::string ver = ansi_reset + ansi_rgb_prefix + ansi_rgb_red +
+                          ansi_cmd_posfix + show_msg;
+        if (line != ver) {
+            fmt::print(error_style,
+                       "Set log level ERROR adhered test failed \n", count);
+            return false;
+        }
+        ++count;
+    }
+    fmt::print(fmt::format(success_style,
+                           "Set log level ERROR adhered test passed \n"));
+
+    return true;
 }
 
-auto main(int  /*argc*/, char*  /*argv*/[]) -> int {
-    constexpr int num_threads_test_console_logger = 3;
-    constexpr int num_threads_test_file_logger = 3;
+auto ascii_color_code(bool user_alloc = false) -> bool {
+    const char* term_output_file = "test_color_codes.txt";
+    if (std::freopen(term_output_file, "w", stdout) == nullptr) {
+        return false;
+    }
+    auto term_output_close_defer = defer([]() { std::fclose(stdout); });
 
-    std::array<std::thread, num_threads_test_console_logger>
-        console_logger_threads;
-    std::array<std::thread, num_threads_test_file_logger> file_logger_threads;
-
-    constexpr Logger::LogStrategy test_strat = Logger::LogStrategy::Blocking;
-
-    for (std::size_t i = 0; i < num_threads_test_console_logger; ++i) {
-        console_logger_threads[i] =
-            std::thread{&Test::test_console_logger, test_strat, get_level(i)};
+    constexpr std::size_t buffer_size = 1 << 16;
+    Logger::Buffer* buf_term = nullptr;
+    if (!user_alloc) {
+        buf_term = Logger::create_buffer(buffer_size);
+    } else {
+        void* buf_user = malloc(buffer_size);
+        buf_term = Logger::create_buffer(buf_user, buffer_size);
     }
 
-    for (std::size_t i = 0; i < num_threads_test_file_logger; ++i) {
-        file_logger_threads[i] =
-            std::thread{&Test::test_file_logger, test_strat, get_level(i)};
+    Logger::set_log_level(Logger::LogLevel::Debug);
+    // Verify correct ANSI codes to color error/warn logs
+    std::string debug_yellow_msg = "Warn Yellow";
+    const char* error_red_msg = "Error Red";
+    Logger::log(buf_term, Logger::LogLevel::Warn, debug_yellow_msg);
+    Logger::log(buf_term, Logger::LogLevel::Error, error_red_msg);
+    Logger::flush(buf_term);
+
+    // ---------------------------------------------------------------------
+    // reset stdout back to the terminal
+    if (std::freopen("/dev/tty", "w", stdout) == nullptr) {
+        return false;
+    }
+    std::ifstream ifs(term_output_file);
+    if (!ifs) {
+        return false;
     }
 
-    for (std::size_t i = 0; i < num_threads_test_console_logger; ++i) {
-        console_logger_threads[i].join();
+    std::string ansi_reset = "\033[0m";
+    std::string ansi_rgb_prefix = "\033[38;2;";
+    std::string ansi_rgb_red = "255;000;000";
+    std::string ansi_rgb_yellow = "255;255;000";
+    std::string ansi_cmd_posfix = "m";
+
+    std::string line;
+    if (std::getline(ifs, line)) {
+        std::string ver = ansi_rgb_prefix + ansi_rgb_yellow + ansi_cmd_posfix +
+                          debug_yellow_msg;
+        if (line != ver) {
+            fmt::print(error_style, "Display WARN in terminal test failed \n");
+            return false;
+        }
+        fmt::print(fmt::format(success_style,
+                               "Display WARN in terminal test passed \n"));
+    }
+    if (std::getline(ifs, line)) {
+        std::string ver = ansi_reset + ansi_rgb_prefix + ansi_rgb_red +
+                          ansi_cmd_posfix + error_red_msg;
+        if (line != ver) {
+            fmt::print(error_style, "Display ERROR in terminal test failed \n");
+            return false;
+        }
+        fmt::print(fmt::format(success_style,
+                               "Display ERROR in terminal test passed \n"));
     }
 
-    for (std::size_t i = 0; i < num_threads_test_file_logger; ++i) {
-        file_logger_threads[i].join();
+    return true;
+}
+}
+
+auto main(int /*argc*/, char* /*argv*/[]) -> int {
+    const fmt::text_style error_style = fmt::fg(fmt::color::red);
+    const fmt::text_style success_style = fmt::fg(fmt::color::green);
+
+    bool all_tests_passed = true;
+
+    all_tests_passed &= Tests::basic();
+    all_tests_passed &= Tests::inorder();
+    all_tests_passed &= Tests::log_level();
+    all_tests_passed &= Tests::ascii_color_code();
+
+    if (std::freopen("/dev/tty", "w", stdout) == nullptr) {
+        return 1;
     }
+    fmt::print("\nUser provided buffer tests \n");
+
+    // User provided buffer
+    all_tests_passed &= Tests::basic(true);
+    all_tests_passed &= Tests::inorder(true);
+    all_tests_passed &= Tests::log_level(true);
+    all_tests_passed &= Tests::ascii_color_code(true);
+
+    // ---------------------------------------------------------------------
+    // reset stdout back to the terminal
+    if (std::freopen("/dev/tty", "w", stdout) == nullptr) {
+        return 1;
+    }
+    if (all_tests_passed) {
+        fmt::print(fmt::format(success_style, "\nALL TESTS PASSED \n"));
+    }
+
+    // TODO
+    // Verify flush is threadsafe
+
+    // // Test user allocated buffer
+    // constexpr std::size_t client_bufsize_bytes = 10240;
+    // void* client_buf = malloc(client_bufsize_bytes);
+    // auto buf_term_client_alloc =
+    //     Logger::create_buffer(client_buf, client_bufsize_bytes);
+    // // Run all tests on client allocated buffer
+
+    return 0;
 }

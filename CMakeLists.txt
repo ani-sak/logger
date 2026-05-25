@@ -1,48 +1,50 @@
 cmake_minimum_required(VERSION 3.24)
-project(AsyncLogger VERSION 0.0.3)
+project(Logger VERSION 0.2.2)
 
-add_library(async_logger STATIC)
+# Logger Target
+add_library(logger STATIC)
+add_library(logger::logger ALIAS logger)
 
-target_sources(async_logger
+target_sources(logger
 	PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/src/logger.cc
-	${CMAKE_CURRENT_LIST_DIR}/src/file_logger_thread.cc
 )
 
-target_include_directories(async_logger
+target_include_directories(logger
 	PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src
 	PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
-# [LIBRARIES]
+target_compile_features(logger
+	PRIVATE
+	cxx_std_11
+)
+
+# External Libraries
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt)
 find_package(Threads REQUIRED)
 
-target_link_libraries(async_logger
+target_link_libraries(logger
 	PRIVATE
 	fmt::fmt
 	Threads::Threads
 )
 
-target_compile_features(async_logger
-	PRIVATE
-	cxx_std_17
-)
-
+# Tests
 option(LOGGER_BUILD_TESTS "Build tests")
 if (${LOGGER_BUILD_TESTS})
 	message(STATUS "Building logger tests")
 
-	add_executable(async_logger_test)
+	add_executable(logger_test)
 
-	target_sources(async_logger_test
+	target_sources(logger_test
 		PRIVATE
 		${CMAKE_CURRENT_LIST_DIR}/test/main.cc
 	)
 
-	target_link_libraries(async_logger_test
+	target_link_libraries(logger_test
 		PRIVATE 
-		async_logger 
+		logger::logger
 		fmt::fmt
 	)
 endif()
