@@ -4,7 +4,6 @@ Simple logger which stores logs in packed buffer and allows user to control
 when logs are flushed.
 
 ## Dependencies
-- [fmt](https://github.com/fmtlib/fmt)
 - C++11
 
 ## Build
@@ -33,6 +32,8 @@ Logger::flush(logbuf); // Write above messages to terminal
 
 Logger::log(logbuf, Logger::LogLevel::Debug, "My log file");
 Logger::flush(logbuf, "log_file.txt"); // Write "Debug: My log file" to log_file.txt
+
+Logger::free_buffer(logbuf); // Free the memory allocated by create_buffer
 ```
 
 The program log level can be modified using `set_log_level`.
@@ -59,6 +60,4 @@ auto logbuf = Logger::create_buffer(memory, 65536);
 
 
 ### TODO
-1. Ensure memory is freed correctly.
-2. Remove submodule dependency on fmt.
-3. Add API to automatically flush if buffer is full.
+- Add API to automatically flush if buffer is full.
