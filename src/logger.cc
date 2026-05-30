@@ -107,7 +107,6 @@ auto free_buffer(Buffer* buffer) -> void {
         return;
     }
 
-    free(buffer->logbuf);
     free(buffer);
 }
 
