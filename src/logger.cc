@@ -28,41 +28,12 @@ struct LogInfo {
     LogLevel log_level;
 };
 
-// logbuf is packed as follows:
-// [Loginfo, Log, Padding, LogInfo, Log, Padding ...]
-// LogInfo contains metadata of the log
-// Log is an array of chars of length specified in the previous LogInfo log_size
-// Padding to align next LogInfo
 struct Buffer {
     char* logbuf = nullptr;
     std::size_t logbuf_size_bytes = 0;
     std::size_t idx = 0;
     bool user_alloc = false;
 };
-
-// auto verify_alloc(Buffer* buf, std::size_t log_size_bytes) -> bool {
-//     std::size_t padding =
-//         (alignof(LogInfo) - (buf->idx % alignof(LogInfo))) % alignof(LogInfo);
-//     return buf->idx + padding + sizeof(LogInfo) + log_size_bytes <=
-//            buf->logbuf_size_bytes;
-// }
-//
-// auto alloc(Buffer* buf, LogInfo log_info, void const* log) -> void {
-//     std::size_t padding =
-//         (alignof(LogInfo) - (buf->idx % alignof(LogInfo))) % alignof(LogInfo);
-//
-//     char* base = buf->logbuf + buf->idx + padding;
-//
-//     auto* info = reinterpret_cast<LogInfo*>(base);
-//     info->log_level = log_info.log_level;
-//     info->log_size = log_info.log_size;
-//
-//     void* dest = static_cast<void*>(base + sizeof(LogInfo));
-//     std::memcpy(dest, log, info->log_size);
-//
-//     buf->idx += padding + sizeof(LogInfo) + info->log_size;
-// }
-
 
 auto verify_alloc(Buffer* buf, std::size_t log_size_bytes) -> bool {
     return buf->logbuf_size_bytes - buf->idx >= log_size_bytes;
@@ -97,6 +68,8 @@ auto alloc(Buffer* buf, std::size_t log_size, void const* log) -> void {
     buf->logbuf[buf->idx] = '\n';
     buf->idx++;
 }
+
+//------------------------------------------------------------------------------
 
 auto create_buffer(std::size_t buffer_size_bytes)
     -> Buffer* {
