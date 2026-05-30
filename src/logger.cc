@@ -65,17 +65,13 @@ auto alloc(Buffer* buf, LogInfo log_info, void const* log) -> void {
 
 auto create_buffer(std::size_t buffer_size_bytes)
     -> Buffer* {
-    auto* buffer = static_cast<Buffer*>(malloc(sizeof(Buffer)));
-    char* logbuf = static_cast<char*>(malloc(buffer_size_bytes));
-    if (buffer == nullptr || logbuf == nullptr) {
+    if (buffer_size_bytes <= sizeof(Buffer)) {
         return nullptr;
     }
 
-    buffer->logbuf = logbuf;
-    buffer->logbuf_size_bytes = buffer_size_bytes;
-    buffer->idx = 0;
+    void* mem = malloc(buffer_size_bytes);
+    auto* buffer = create_buffer(mem, buffer_size_bytes);
     buffer->user_alloc = false;
-
     return buffer;
 }
 
