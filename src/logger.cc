@@ -1,11 +1,7 @@
 #include "logger/logger.hpp"
 
-#include "fmt/base.h"
-#include "fmt/color.h"
-#include "fmt/os.h"
-
 #include <cstddef> // std::size_t
-#include <cstdlib>
+#include <cstdio> // printf, fopen, fprintf
 #include <cstring> // std::memcpy
 
 // Support log API taking string and string_view
@@ -175,19 +171,14 @@ auto log(Buffer* buffer, LogLevel loglevel,
 }
 
 auto flush(Buffer* buf) -> bool {
-    std::string_view log(buf->logbuf, buf->idx);
-    fmt::print("{}", log);
-
+    printf("%.*s", buf->idx, buf->logbuf);
     buf->idx = 0;
     return true;
 }
 
 auto flush(Buffer* buf, const std::string& logfile) -> bool {
-    auto outfile = fmt::output_file(logfile);
-
-    std::string_view log(buf->logbuf, buf->idx);
-    outfile.print("{}", log);
-
+    FILE* outfile = fopen(logfile.data(), "w");
+    fprintf(outfile, "%.*s", buf->idx, buf->logbuf);
     buf->idx = 0;
     return true;
 }
