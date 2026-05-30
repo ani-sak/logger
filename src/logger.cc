@@ -40,27 +40,62 @@ struct Buffer {
     bool user_alloc = false;
 };
 
+// auto verify_alloc(Buffer* buf, std::size_t log_size_bytes) -> bool {
+//     std::size_t padding =
+//         (alignof(LogInfo) - (buf->idx % alignof(LogInfo))) % alignof(LogInfo);
+//     return buf->idx + padding + sizeof(LogInfo) + log_size_bytes <=
+//            buf->logbuf_size_bytes;
+// }
+//
+// auto alloc(Buffer* buf, LogInfo log_info, void const* log) -> void {
+//     std::size_t padding =
+//         (alignof(LogInfo) - (buf->idx % alignof(LogInfo))) % alignof(LogInfo);
+//
+//     char* base = buf->logbuf + buf->idx + padding;
+//
+//     auto* info = reinterpret_cast<LogInfo*>(base);
+//     info->log_level = log_info.log_level;
+//     info->log_size = log_info.log_size;
+//
+//     void* dest = static_cast<void*>(base + sizeof(LogInfo));
+//     std::memcpy(dest, log, info->log_size);
+//
+//     buf->idx += padding + sizeof(LogInfo) + info->log_size;
+// }
+
+
 auto verify_alloc(Buffer* buf, std::size_t log_size_bytes) -> bool {
-    std::size_t padding =
-        (alignof(LogInfo) - (buf->idx % alignof(LogInfo))) % alignof(LogInfo);
-    return buf->idx + padding + sizeof(LogInfo) + log_size_bytes <=
-           buf->logbuf_size_bytes;
+    return buf->logbuf_size_bytes - buf->idx >= log_size_bytes;
 }
 
-auto alloc(Buffer* buf, LogInfo log_info, void const* log) -> void {
-    std::size_t padding =
-        (alignof(LogInfo) - (buf->idx % alignof(LogInfo))) % alignof(LogInfo);
+const char* prefix_warn = "Warn: ";
+const char* prefix_error = "Error: ";
+std::size_t prefix_size_max = 7;
 
-    char* base = buf->logbuf + buf->idx + padding;
+auto alloc_prefix(Buffer* buf, Logger::LogLevel log_level) -> void {
+    void* dest = static_cast<void*>(buf->logbuf + buf->idx);
 
-    auto* info = reinterpret_cast<LogInfo*>(base);
-    info->log_level = log_info.log_level;
-    info->log_size = log_info.log_size;
+    switch (log_level) {
+        case Logger::LogLevel::Warn:
+            std::memcpy(dest, prefix_warn, 6);
+            buf->idx += 6;
+            break;
+        case Logger::LogLevel::Error:
+            std::memcpy(dest, prefix_error, 7);
+            buf->idx += 7;
+            break;
+        default:
+            break;
+    }
+}
 
-    void* dest = static_cast<void*>(base + sizeof(LogInfo));
-    std::memcpy(dest, log, info->log_size);
+auto alloc(Buffer* buf, std::size_t log_size, void const* log) -> void {
+    void* base_log = static_cast<void*>(buf->logbuf + buf->idx);
+    std::memcpy(base_log, log, log_size);
+    buf->idx += log_size;
 
-    buf->idx += padding + sizeof(LogInfo) + info->log_size;
+    buf->logbuf[buf->idx] = '\n';
+    buf->idx++;
 }
 
 auto create_buffer(std::size_t buffer_size_bytes)
@@ -116,14 +151,15 @@ auto log(Buffer* buffer, LogLevel loglevel,
     if (loglevel > log_level_program) {
         return false;
     }
-    if (!verify_alloc(buffer, logmsg.size())) {
+
+    std::size_t encoded_logsize =
+        prefix_size_max + logmsg.size() + 1; // Add 1 for postfix \n
+    if (!verify_alloc(buffer, encoded_logsize)) {
         return false;
     }
 
-    LogInfo info;
-    info.log_level = loglevel;
-    info.log_size = logmsg.size();
-    alloc(buffer, info, logmsg.data());
+    alloc_prefix(buffer, loglevel);
+    alloc(buffer, logmsg.size(), logmsg.data());
 
     return true;
 }
@@ -136,14 +172,14 @@ auto log(Buffer* buffer, LogLevel loglevel, const char* logmsg_c)
 
     std::string logmsg(logmsg_c);
 
-    if (!verify_alloc(buffer, logmsg.size())) {
+    std::size_t encoded_logsize =
+        prefix_size_max + logmsg.size() + 1; // Add 1 for postfix \n
+    if (!verify_alloc(buffer, encoded_logsize)) {
         return false;
     }
 
-    LogInfo info{};
-    info.log_level = loglevel;
-    info.log_size = logmsg.size();
-    alloc(buffer, info, logmsg.data());
+    alloc_prefix(buffer, loglevel);
+    alloc(buffer, logmsg.size(), logmsg.data());
 
     return true;
 }
@@ -153,46 +189,22 @@ auto log(Buffer* buffer, LogLevel loglevel,
     if (loglevel > log_level_program) {
         return false;
     }
-    if (!verify_alloc(buffer, logmsg.size())) {
+
+    std::size_t encoded_logsize =
+        prefix_size_max + logmsg.size() + 1; // Add 1 for postfix \n
+    if (!verify_alloc(buffer, encoded_logsize)) {
         return false;
     }
 
-    LogInfo info;
-    info.log_level = loglevel;
-    info.log_size = logmsg.size();
-    alloc(buffer, info, logmsg.data());
+    alloc_prefix(buffer, loglevel);
+    alloc(buffer, logmsg.size(), logmsg.data());
 
     return true;
 }
 
 auto flush(Buffer* buf) -> bool {
-    int32_t idx = 0;
-    while (idx < buf->idx) {
-        std::size_t padding =
-            (alignof(LogInfo) - (idx % alignof(LogInfo))) % alignof(LogInfo);
-
-        char* base = buf->logbuf + idx + padding;
-
-        auto* info = reinterpret_cast<LogInfo*>(base);
-        fmt::text_style style;
-        switch (info->log_level) {
-        case LogLevel::Debug:
-            style = {};
-            break;
-        case LogLevel::Warn:
-            style = fmt::fg(fmt::color::yellow);
-            break;
-        case LogLevel::Error:
-            style = fmt::fg(fmt::color::red);
-            break;
-        }
-
-        char* dest = (base + sizeof(LogInfo));
-        std::string_view log((dest), info->log_size);
-        fmt::print(fmt::format(style, "{}\n", log));
-
-        idx += padding + sizeof(LogInfo) + info->log_size;
-    }
+    std::string_view log(buf->logbuf, buf->idx);
+    fmt::print("{}", log);
 
     buf->idx = 0;
     return true;
@@ -201,34 +213,8 @@ auto flush(Buffer* buf) -> bool {
 auto flush(Buffer* buf, const std::string& logfile) -> bool {
     auto outfile = fmt::output_file(logfile);
 
-    int32_t idx = 0;
-    while (idx < buf->idx) {
-        std::size_t padding =
-            (alignof(LogInfo) - (idx % alignof(LogInfo))) % alignof(LogInfo);
-
-        char* base = buf->logbuf + idx + padding;
-
-        auto* info = reinterpret_cast<LogInfo*>(base);
-
-        std::string prefix;
-        switch (info->log_level) {
-        case LogLevel::Debug:
-            prefix = "Debug";
-            break;
-        case LogLevel::Warn:
-            prefix = "WARN";
-            break;
-        case LogLevel::Error:
-            prefix = "ERROR";
-            break;
-        }
-
-        char* dest = (base + sizeof(LogInfo));
-        std::string_view log((dest), info->log_size);
-        outfile.print("{}: {} \n", prefix, log);
-
-        idx += padding + sizeof(LogInfo) + info->log_size;
-    }
+    std::string_view log(buf->logbuf, buf->idx);
+    outfile.print("{}", log);
 
     buf->idx = 0;
     return true;
