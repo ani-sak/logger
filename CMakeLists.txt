@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(Logger VERSION 0.2.2)
+project(Logger VERSION 0.3.0)
 
 # Logger Target
 add_library(logger STATIC)
