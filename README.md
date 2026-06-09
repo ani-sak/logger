@@ -61,3 +61,4 @@ auto logbuf = Logger::create_buffer(memory, 65536);
 
 ### TODO
 - Add API to automatically flush if buffer is full.
+- Provide user/library controlled buffers to printf via setvbuf
