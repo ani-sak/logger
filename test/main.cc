@@ -1,8 +1,5 @@
 #include "logger/logger.hpp"
 
-#include "fmt/base.h"
-#include "fmt/color.h"
-
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -31,9 +28,6 @@ auto defer(F func) -> Defer<F> {
 } // namespace
 
 namespace Tests {
-const fmt::text_style error_style = fmt::fg(fmt::color::red);
-const fmt::text_style success_style = fmt::fg(fmt::color::green);
-
 auto basic(bool user_alloc = false) -> bool {
     const char* term_output_file = "test_basic.txt";
     if (std::freopen(term_output_file, "w", stdout) == nullptr) {
@@ -80,59 +74,53 @@ auto basic(bool user_alloc = false) -> bool {
         switch (type_count) {
         case 0: {
             if (line != "string lvalue") {
-                fmt::print(fmt::format(error_style,
-                                       "Basic test [{}/{}] failed \n",
-                                       type_count + 1, basic_tests_num));
+                 printf("\033[0m\033[38;2;000;255;000m Basic test [{%zu}/{%zu}] failed \n",
+                                       type_count + 1, basic_tests_num);
                 return false;
             }
 
-            fmt::print(fmt::format(success_style,
-                                   "Basic test [{}/{}] passed \n",
-                                   type_count + 1, basic_tests_num));
+             printf("\033[0m\033[38;2;000;255;000m Basic test [{%zu}/{%zu}] passed \n",
+                                   type_count + 1, basic_tests_num);
             break;
         }
         case 1: {
             if (line != "string rvalue") {
-                fmt::print(fmt::format(error_style,
-                                       "Basic test [{}/{}] failed \n",
-                                       type_count + 1, basic_tests_num));
+                printf("\033[0m\033[38;2;255;000;000m Basic test [{%zu}/{%zu}] "
+                       "failed \n",
+                       type_count + 1, basic_tests_num);
                 return false;
             }
 
-            fmt::print(fmt::format(success_style,
-                                   "Basic test [{}/{}] passed \n",
-                                   type_count + 1, basic_tests_num));
+            printf("\033[0m\033[38;2;000;255;000m Basic test [{%zu}/{%zu}] "
+                   "passed \n",
+                   type_count + 1, basic_tests_num);
             break;
         }
         case 2: {
             if (line != "const char pointer") {
-                fmt::print(fmt::format(error_style,
-                                       "Basic test [{}/{}] failed \n",
-                                       type_count + 1, basic_tests_num));
+                 printf("\033[0m\033[38;2;255;000;000m Basic test [{%zu}/{%zu}] failed \n",
+                                       type_count + 1, basic_tests_num);
                 return false;
             }
 
-            fmt::print(fmt::format(success_style,
-                                   "Basic test [{}/{}] passed \n",
-                                   type_count + 1, basic_tests_num));
+             printf("\033[0m\033[38;2;000;255;000m Basic test [{%zu}/{%zu}] passed \n",
+                                   type_count + 1, basic_tests_num);
             break;
         }
         case 3: {
             if (line != "string view") {
-                fmt::print(fmt::format(error_style,
-                                       "Basic test [{}/{}] failed \n",
-                                       type_count + 1, basic_tests_num));
+                 printf("\033[0m\033[38;2;255;000;000m Basic test [{%zu}/{%zu}] failed \n",
+                                       type_count + 1, basic_tests_num);
                 return false;
             }
 
-            fmt::print(fmt::format(success_style,
-                                   "Basic test [{}/{}] passed \n",
-                                   type_count + 1, basic_tests_num));
+             printf("\033[0m\033[38;2;000;255;000m Basic test [{%zu}/{%zu}] passed \n",
+                                   type_count + 1, basic_tests_num);
             break;
         }
         default: {
-            fmt::print(error_style, "Basic test entry {} missing \n",
-                       type_count + 1, basic_tests_num, type_count);
+             printf("\033[0m\033[38;2;255;000;000m Basic test entry {%zu} missing \n",
+                       type_count + 1);
             break;
         }
         }
@@ -187,27 +175,24 @@ auto inorder(bool user_alloc = false) -> bool {
     std::size_t count = 0;
     while (count < num_inorder_logs && std::getline(ifs, line)) {
         if (line != std::to_string(count)) {
-            fmt::print(error_style, "Inorder test entry {} out of order \n",
+             printf("\033[0m\033[38;2;255;000;000m Inorder test entry {%zu} out of order \n",
                        count);
             return false;
         }
         ++count;
     }
-    fmt::print(fmt::format(success_style, "Inorder test passed \n"));
+     printf("\033[0m\033[38;2;000;255;000m Inorder test passed \n");
 
     count = 0;
     while (count < buffer_size * 10 && std::getline(ifs, line)) {
         if (line != std::to_string(count)) {
-            fmt::print(error_style, "Buffer does not overwrite test failed \n",
-                       count);
-            fmt::print(line);
+             printf("\033[0m\033[38;2;255;000;000m Buffer does not overwrite test failed \n");
             return false;
         }
         ++count;
     }
 
-    fmt::print(
-        fmt::format(success_style, "Buffer does not overwrite test passed \n"));
+     printf("\033[0m\033[38;2;000;255;000m Buffer does not overwrite test passed \n");
     return true;
 }
 
@@ -275,15 +260,12 @@ auto log_level(bool user_alloc = false) -> bool {
                   ansi_cmd_posfix + show_msg;
         }
         if (line != ver) {
-            fmt::print(error_style,
-                       "Set log level WARN adhered test [{}/{}] failed \n",
-                       (count + 1), set_log_level_warn_test_entries);
+             printf("\033[0m\033[38;2;255;000;000m Set log level WARN adhered test [{%zu}/{%zu}] failed \n", (count + 1), set_log_level_warn_test_entries);
             return false;
         }
         ++count;
     }
-    fmt::print(fmt::format(success_style,
-                           "Set log level WARN adhered test passed \n"));
+     printf("\033[0m\033[38;2;000;255;000m Set log level WARN adhered test passed \n");
 
     count = 0;
     while (count < set_log_level_error_test_entries &&
@@ -291,14 +273,12 @@ auto log_level(bool user_alloc = false) -> bool {
         std::string ver = ansi_reset + ansi_rgb_prefix + ansi_rgb_red +
                           ansi_cmd_posfix + show_msg;
         if (line != ver) {
-            fmt::print(error_style,
-                       "Set log level ERROR adhered test failed \n", count);
+             printf("\033[0m\033[38;2;255;000;000m Set log level ERROR adhered test failed \n");
             return false;
         }
         ++count;
     }
-    fmt::print(fmt::format(success_style,
-                           "Set log level ERROR adhered test passed \n"));
+     printf("\033[0m\033[38;2;000;255;000m Set log level ERROR adhered test passed \n");
 
     return true;
 }
@@ -348,21 +328,19 @@ auto ascii_color_code(bool user_alloc = false) -> bool {
         std::string ver = ansi_rgb_prefix + ansi_rgb_yellow + ansi_cmd_posfix +
                           debug_yellow_msg;
         if (line != ver) {
-            fmt::print(error_style, "Display WARN in terminal test failed \n");
+             printf("\033[0m\033[38;2;255;000;000m Display WARN in terminal test failed \n");
             return false;
         }
-        fmt::print(fmt::format(success_style,
-                               "Display WARN in terminal test passed \n"));
+         printf("\033[0m\033[38;2;000;255;000m Display WARN in terminal test passed \n");
     }
     if (std::getline(ifs, line)) {
         std::string ver = ansi_reset + ansi_rgb_prefix + ansi_rgb_red +
                           ansi_cmd_posfix + error_red_msg;
         if (line != ver) {
-            fmt::print(error_style, "Display ERROR in terminal test failed \n");
+             printf("\033[0m\033[38;2;255;000;000m Display ERROR in terminal test failed \n");
             return false;
         }
-        fmt::print(fmt::format(success_style,
-                               "Display ERROR in terminal test passed \n"));
+         printf("\033[0m\033[38;2;000;255;000m Display ERROR in terminal test passed \n");
     }
 
     return true;
@@ -370,9 +348,6 @@ auto ascii_color_code(bool user_alloc = false) -> bool {
 }
 
 auto main(int /*argc*/, char* /*argv*/[]) -> int {
-    const fmt::text_style error_style = fmt::fg(fmt::color::red);
-    const fmt::text_style success_style = fmt::fg(fmt::color::green);
-
     bool all_tests_passed = true;
 
     all_tests_passed &= Tests::basic();
@@ -383,7 +358,7 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
     if (std::freopen("/dev/tty", "w", stdout) == nullptr) {
         return 1;
     }
-    fmt::print("\nUser provided buffer tests \n");
+    printf("\n\033[0mUser provided buffer tests \n");
 
     // User provided buffer
     all_tests_passed &= Tests::basic(true);
@@ -397,9 +372,11 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
         return 1;
     }
     if (all_tests_passed) {
-        fmt::print(fmt::format(success_style, "\nALL TESTS PASSED \n"));
+         printf("\033[0m\033[38;2;000;255;000m \nALL TESTS PASSED \n");
     }
 
+    // ANSI reset to void colored terminal
+    printf("\033[0m");
     // TODO
     // Verify flush is threadsafe
 

@@ -20,13 +20,10 @@ target_compile_features(logger
 	cxx_std_11
 )
 
-# External Libraries
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt)
 find_package(Threads REQUIRED)
 
 target_link_libraries(logger
 	PRIVATE
-	fmt::fmt
 	Threads::Threads
 )
 
@@ -45,6 +42,5 @@ if (${LOGGER_BUILD_TESTS})
 	target_link_libraries(logger_test
 		PRIVATE 
 		logger::logger
-		fmt::fmt
 	)
 endif()
