@@ -180,6 +180,7 @@ auto flush(Buffer* buf, const std::string& logfile) -> bool {
     FILE* outfile = fopen(logfile.data(), "w");
     fprintf(outfile, "%.*s", buf->idx, buf->logbuf);
     buf->idx = 0;
+    fclose(outfile);
     return true;
 }
 
