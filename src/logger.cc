@@ -19,11 +19,6 @@
 
 namespace Logger {
 
-struct LogInfo {
-    std::size_t log_size;
-    LogLevel log_level;
-};
-
 struct Buffer {
     char* logbuf = nullptr;
     std::size_t logbuf_size_bytes = 0;
@@ -31,28 +26,31 @@ struct Buffer {
     bool user_alloc = false;
 };
 
+namespace {
+
 auto verify_alloc(Buffer* buf, std::size_t log_size_bytes) -> bool {
     return buf->logbuf_size_bytes - buf->idx >= log_size_bytes;
 }
 
 const char* prefix_warn = "Warn: ";
 const char* prefix_error = "Error: ";
-std::size_t prefix_size_max = 7;
+constexpr std::size_t prefix_size_max = 7;
+constexpr std::size_t prefix_size_warn = 6;
 
 auto alloc_prefix(Buffer* buf, Logger::LogLevel log_level) -> void {
     void* dest = static_cast<void*>(buf->logbuf + buf->idx);
 
     switch (log_level) {
-        case Logger::LogLevel::Warn:
-            std::memcpy(dest, prefix_warn, 6);
-            buf->idx += 6;
-            break;
-        case Logger::LogLevel::Error:
-            std::memcpy(dest, prefix_error, 7);
-            buf->idx += 7;
-            break;
-        default:
-            break;
+    case Logger::LogLevel::Warn:
+        std::memcpy(dest, prefix_warn, prefix_size_warn);
+        buf->idx += prefix_size_warn;
+        break;
+    case Logger::LogLevel::Error:
+        std::memcpy(dest, prefix_error, prefix_size_max);
+        buf->idx += prefix_size_max;
+        break;
+    default:
+        break;
     }
 }
 
@@ -64,6 +62,8 @@ auto alloc(Buffer* buf, std::size_t log_size, void const* log) -> void {
     buf->logbuf[buf->idx] = '\n';
     buf->idx++;
 }
+
+} // namespace
 
 //------------------------------------------------------------------------------
 
