@@ -14,7 +14,7 @@ add_subdirectory(PATH_TO_LOGGER_LIBRARY)
 target_link_libraries(your_target PRIVATE async_logger)
 ```
 
-### g++
+### g++/ clangd
 TODO
 
 ## Usage
@@ -58,7 +58,8 @@ void* memory = malloc(65536);
 auto logbuf = Logger::create_buffer(memory, 65536);
 ```
 
-
-### TODO
-- Add API to automatically flush if buffer is full.
-- Provide user/library controlled buffers to printf via setvbuf
+## TODO
+- Add log API that automatically flush buffer if full
+- Add API to query current log level
+- Track no of logs (and bytes) missed due to full buffer, API to give data to user
+- Add API to query current log level
